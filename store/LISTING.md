@@ -30,7 +30,7 @@ YouTube's label covers only part of AI-generated content, and many AI videos hav
 WHAT IT DOES
 • On a video page: if YouTube labels the video as made with AI, a banner offers "Hide this channel" or "Dismiss"
 • In feeds: filters cards of videos already known to be labelled, channels you hid, and (optional) channels listed in AiSList
-• Channels with 2 or more labelled videos are dimmed with that reason, never hidden
+• Unlabelled videos from channels with 2 or more labelled videos are dimmed with that reason, never hidden
 • Dim + reason (default): the card is faded and a chip says why, with "Show" and "Allow channel" buttons
 • Hide: filtered cards are removed; "Reveal" in the popup shows what was hidden on the page
 • Optional "Check every visible video" (off by default): asks YouTube about each video on screen, one request at a time across all tabs, at least 1 second apart, and saves the results
@@ -64,7 +64,7 @@ YouTube 라벨은 AI 생성 콘텐츠의 일부에만 붙고, 라벨이 없는 A
 기능
 • 시청 페이지: YouTube가 AI 제작 라벨을 붙인 영상이면 "Hide this channel"(이 채널 숨기기) / "Dismiss"(닫기) 배너 표시
 • 피드: 라벨이 확인된 영상, 직접 숨긴 채널, (선택) AiSList에 있는 채널의 카드를 거름
-• 라벨 영상이 2개 이상인 채널은 숨기지 않고 그 이유와 함께 흐리게 표시
+• 라벨 영상이 2개 이상인 채널의, 라벨 없는 다른 영상은 숨기지 않고 그 이유와 함께 흐리게 표시
 • "Dim + reason"(기본값): 카드를 흐리게 하고 이유와 "Show", "Allow channel" 버튼이 있는 칩을 붙임
 • "Hide": 걸러진 카드를 없앰. 팝업의 "Reveal"로 그 페이지에서 숨긴 카드를 볼 수 있음
 • 선택 기능 "Check every visible video"(기본 꺼짐): 화면에 보이는 영상을 모든 탭을 통틀어 한 번에 하나씩, 최소 1초 간격으로 YouTube에 묻고 결과를 저장
@@ -96,7 +96,7 @@ YouTube 라벨은 AI 생성 콘텐츠의 일부에만 붙고, 라벨이 없는 A
 ## Privacy practices tab
 
 **Single purpose description:**
-Dims or hides YouTube videos that YouTube itself labels as made with AI (plus channels the user hides and, if the user opts in, channels on the community list AiSList), and shows why each one was filtered. Channels with two or more labelled videos are dimmed with that reason, never hidden.
+Dims or hides YouTube videos that YouTube itself labels as made with AI (plus channels the user hides and, if the user opts in, channels on the community list AiSList), and shows why each one was filtered. Unlabelled videos from channels with two or more labelled videos are dimmed with that reason, never hidden.
 
 **Permission justification: storage**
 Stores, in chrome.storage.local on the device: the user's settings, the user's hidden and always-shown channel lists, a cache of per-video label results (so a video is not checked again for 30 days, or 180 days if labelled), per channel the IDs of up to 5 labelled videos (to recognise channels with 2 or more), whether requests to YouTube are paused, the last self-check result, and, if enabled, the downloaded AiSList copy. Nothing is stored anywhere else.

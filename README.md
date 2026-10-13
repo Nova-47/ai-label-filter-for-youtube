@@ -20,7 +20,7 @@ A Chrome extension that dims or hides the videos YouTube itself labels as made w
 > For more coverage, turn on the community list AiSList or "Check every visible video" (both off by default).
 
 - **Only YouTube's own label.** A video counts as AI only if YouTube shows its AI badge under the title. No model, no title or thumbnail heuristics.
-- **Every filtered card says why.** By default a filtered card is dimmed, with a chip that names the reason and offers **Show** and **Allow channel**. If you would rather not see them at all, choose **Hide** in the popup.
+- **Every filtered card says why.** By default a filtered card is dimmed, with a chip that names the reason and offers **Show** and, when the card links its channel, **Allow channel**. If you would rather not see them at all, choose **Hide** in the popup.
 - **Small and auditable.** No server, no dependencies, no build step. One required permission (`storage`) plus a content script on www.youtube.com. Every network request is made in one of two functions, listed [below](#how-to-audit-it).
 
 ---
@@ -78,7 +78,7 @@ Results are saved for 30 days for a video without the label (YouTube may add one
 ### What you see
 
 - **Dim + reason** (default): the card is faded and a chip shows the reason, with **Show** (shows that video normally in this tab until you reload) and **Allow channel** (adds the channel to Always shown channels; only offered when the card has a channel link).
-- **Hide**: filtered cards are removed from view, except channels with 2+ labelled videos, which stay dimmed. To see what was hidden, open the popup and press **Reveal** under "This page": that tab switches to the dimmed view, with the same chips, until you press **Hide again** or reload.
+- **Hide**: filtered cards are removed from view, except cards filtered only because their channel has 2+ labelled videos, which stay dimmed. To see what was hidden, open the popup and press **Reveal** under "This page": that tab switches to the dimmed view, with the same chips, until you press **Hide again** or reload.
 - **Watch page banner**: shown when the open video is labelled, in either mode. **Hide this channel** adds the channel to Hidden channels (the button is left out if the channel is unknown or already on that list). No banner appears for a channel on Always shown channels. The video itself is never hidden.
 
 If anything fails (network error, timeout, unexpected reply, removed video), the video is shown and nothing is saved.
