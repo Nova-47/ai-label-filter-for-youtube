@@ -67,7 +67,7 @@ In this order:
 1. **Always shown channels**: a channel on this list is never filtered.
 2. **Hidden channels**: you added the channel with **Hide this channel**. Chip: "Your blocklist".
 3. **YouTube AI label**: the video itself is labelled. Chip: "YouTube AI label".
-4. **Channel where most checked videos are labelled**: of the last 20 different videos from this channel checked on your device: at least 5 checked, at least 2 labelled, at least 60%. A video checked again counts once and moves to the newest place, with its latest result. Chip: "Channel: N of last M checked videos AI-labelled", where M is the number of videos in that sample (at most 20). These cards are always dimmed with their reason, never hidden, even in Hide mode, because this is an inference rather than a label on the video.
+4. **Channel where most checked videos are labelled**: of the last 20 different videos from this channel checked on your device: at least 5 checked, at least 2 labelled, at least 60%. A video checked again counts once and moves to the newest place, with its latest result. Chip: "Channel: N of last M checked videos AI-labelled", where M is the number of videos in that sample (at most 20). These cards are always dimmed with their reason, never hidden, even in Hide mode, because this is an inference rather than a label on the video. The popup switch **Also dim channels whose recent videos are mostly AI-labelled** (on by default) turns this rule off; checked videos are still counted, so turning it back on applies at once.
 5. **Listed in AiSList**: only if you turned AiSList on. Chip: "Listed in AiSList".
 
 Cards that match no rule are shown. Rules 1, 2, 4 and 5 need a channel link on the card (a `/@handle` or `/channel/UC…` link).
@@ -168,6 +168,7 @@ It does not ask for `tabs`, `history`, or "read and change all your data on all 
 |---|---|---|
 | Switch in the header ("Turn filtering on or off") | On | Turns filtering, the banner and all requests to YouTube on or off. |
 | Filtered videos: **Dim + reason** / **Hide** | Dim + reason | Dim fades the card and shows why; Hide removes it from view (see [What you see](#what-you-see)). |
+| **Also dim channels whose recent videos are mostly AI-labelled** | On | Applies rule 4 of [Why a card is filtered](#why-a-card-is-filtered). Off: no card is dimmed for its channel's checked videos; labelled videos are still filtered. |
 | **Check every visible video** | Off | Asks YouTube about cards on screen that have no saved result: newest first, only while the tab is in front, each video once per tab. Cards scrolled away before their turn are skipped. |
 | **Hide channels listed in AiSList** | Off | Filters channels on [AiSList](https://github.com/Override92/AiSList). Downloads the list at most once per 24 hours; **Refresh now** downloads it again. On first use the popup offers it in a "Community list (optional)" card with **Turn on** and **Not now**. |
 | **Hidden channels** | empty | Channels added with **Hide this channel**. **Remove** takes one off. |

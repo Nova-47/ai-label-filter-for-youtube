@@ -201,7 +201,7 @@ function browser({ latency = 0, setLatency = latency, eventMs = 0, netMs = 100, 
     };
   }
 
-  return { tab, run, store, writes, requests, now: () => now, get maxInflight() { return maxInflight; } };
+  return { tab, run, store, local, writes, requests, now: () => now, get maxInflight() { return maxInflight; } };
 }
 
 // The few DOM element features content.js uses.

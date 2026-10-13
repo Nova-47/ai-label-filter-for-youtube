@@ -336,6 +336,39 @@ test('auto-flagged channel: marked "channel" with chip, and the CSS never hides 
   assert.match(css, /html\.ailf-on \[data-ailf="channel"\] > \.ailf-chip/);
 });
 
+// Owner decision: the channel rule has a popup switch (setting channelRule,
+// on by default). Off: no card gets the 'channel' reason, labelled videos are
+// still filtered, and channel windows keep being recorded.
+test('channel rule switch: off → no channel marks, label rule and recording go on; on → back at once', async () => {
+  const U = 'UCMMmm45yro8eyHzadofoG4A';
+  const b = browser({ respond: () => reply(200, fixture('labelled-yHG-pivADos.json')) });
+  const day = Math.floor(b.now() / 86400000);
+  Object.assign(b.store, {
+    selfcheck: { at: b.now() }, settings: { channelRule: false },
+    verdicts: { aiaiaiaiaia: [1, day, day, 0, 0] },
+    channels: { [U]: { h: 'foreverharmony_official', w: ['v1:a1', 'v2:b1', 'v3:c1', 'v4:d1', 'v5:e0'] } },
+  });
+  const t = b.tab('https://www.youtube.com/');
+  const flagged = t.addCard('aaaaaaaaaaa', '/@ForeverHarmony_Official');
+  const labelled = t.addCard('aiaiaiaiaia', '/@someoneelse');
+  await b.run(1000);
+  assert.equal('ailf' in flagged.dataset, false);                  // off: not marked
+  assert.equal(labelled.dataset.ailf, 'label');                    // the label rule still applies
+  t.navigate(watch(LABELLED));                                     // a verdict is still recorded
+  await b.run(10000);
+  assert.deepEqual(pairs(b.store.channels['UCp1mMtCnO_11BC4dbGv4BSA']), [[LABELLED, 1]]);
+  b.local.set({ settings: { channelRule: true } });          // switched on in the popup
+  await b.run(2000);
+  assert.equal(flagged.dataset.ailf, 'channel');
+  b.local.set({ settings: {} });                             // default: on
+  await b.run(2000);
+  assert.equal(flagged.dataset.ailf, 'channel');
+  b.local.set({ settings: { channelRule: false } });
+  await b.run(2000);
+  assert.equal('ailf' in flagged.dataset, false);
+  assert.equal(labelled.dataset.ailf, 'label');
+});
+
 // Dim is the default, so a filtered card shows its reason out of the box;
 // Hide stays a choice in the popup.
 test('mode: dim by default, hide when chosen', async () => {
@@ -355,6 +388,7 @@ test('mode: dim by default, hide when chosen', async () => {
   const defaults = (f) => /const DEFAULTS = (\{[^}]*\});/.exec(fs.readFileSync(path.join(__dirname, '..', f), 'utf8'))[1];
   assert.equal(defaults('popup.js'), defaults('content.js'));
   assert.match(defaults('content.js'), /mode: 'dim'/);
+  assert.match(defaults('content.js'), /channelRule: true/);
 });
 
 // Review L3: a card reused for another video by changing only its link's

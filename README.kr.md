@@ -67,7 +67,7 @@ YouTube는 AI로 제작됐다고 라벨을 붙인 영상의 제목 아래에 "AI
 1. **Always shown channels**(항상 보일 채널): 이 목록에 있는 채널은 거르지 않습니다.
 2. **Hidden channels**(숨긴 채널): **Hide this channel**로 추가한 채널입니다. 칩: "Your blocklist".
 3. **YouTube AI label**: 영상 자체에 라벨이 있습니다. 칩: "YouTube AI label".
-4. **확인한 영상 대부분에 라벨이 있는 채널**: 이 기기에서 이 채널의 서로 다른 영상을 마지막으로 확인한 20개 중 확인한 영상이 5개 이상, 라벨 영상이 2개 이상, 비율이 60% 이상입니다. 같은 영상을 다시 확인하면 한 번만 세고 가장 최근 자리로 옮기며, 가장 최근 결과를 씁니다. 칩: "Channel: N of last M checked videos AI-labelled". M은 그 표본의 영상 수입니다(최대 20). 영상에 붙은 라벨이 아니라 추론이기 때문에 Hide 모드에서도 숨기지 않고 늘 이유와 함께 흐리게 표시합니다.
+4. **확인한 영상 대부분에 라벨이 있는 채널**: 이 기기에서 이 채널의 서로 다른 영상을 마지막으로 확인한 20개 중 확인한 영상이 5개 이상, 라벨 영상이 2개 이상, 비율이 60% 이상입니다. 같은 영상을 다시 확인하면 한 번만 세고 가장 최근 자리로 옮기며, 가장 최근 결과를 씁니다. 칩: "Channel: N of last M checked videos AI-labelled". M은 그 표본의 영상 수입니다(최대 20). 영상에 붙은 라벨이 아니라 추론이기 때문에 Hide 모드에서도 숨기지 않고 늘 이유와 함께 흐리게 표시합니다. 팝업 스위치 **Also dim channels whose recent videos are mostly AI-labelled**(기본 켜짐)로 이 규칙을 끌 수 있습니다. 꺼도 확인한 영상은 계속 세므로, 다시 켜면 바로 적용됩니다.
 5. **Listed in AiSList**: AiSList를 켠 경우에만 해당합니다. 칩: "Listed in AiSList".
 
 해당하는 규칙이 없으면 보여 줍니다. 1, 2, 4, 5번은 카드에 채널 링크(`/@handle`이나 `/channel/UC…`)가 있어야 적용됩니다.
@@ -170,6 +170,7 @@ YouTube가 정상적으로 답하지 않으면 모든 탭에서 요청을 한동
 |---|---|---|
 | 머리글의 스위치 ("Turn filtering on or off") | 켜짐 | 필터링, 배너, YouTube로 보내는 모든 요청을 켜거나 끕니다. |
 | Filtered videos: **Dim + reason** / **Hide** | Dim + reason | Dim은 카드를 흐리게 하고 이유를 보여 주고, Hide는 화면에서 없앱니다([화면에서 보이는 것](#화면에서-보이는-것) 참고). |
+| **Also dim channels whose recent videos are mostly AI-labelled** | 켜짐 | [카드를 거르는 이유](#카드를-거르는-이유)의 4번 규칙을 적용합니다. 끄면 채널에서 확인한 영상 때문에 흐려지는 카드는 없고, 라벨 영상은 그대로 거릅니다. |
 | **Check every visible video** | 꺼짐 | 화면에 보이고 저장된 결과가 없는 카드를 YouTube에 묻습니다. 가장 최근에 보인 카드부터, 탭이 앞에 있을 때만, 영상마다 탭당 한 번입니다. 차례가 오기 전에 화면에서 벗어난 카드는 건너뜁니다. |
 | **Hide channels listed in AiSList** | 꺼짐 | [AiSList](https://github.com/Override92/AiSList)에 있는 채널을 거릅니다. 목록은 24시간에 최대 한 번 내려받고, **Refresh now**로 다시 받을 수 있습니다. 처음에는 팝업에 "Community list (optional)" 카드가 **Turn on** / **Not now** 버튼과 함께 뜹니다. |
 | **Hidden channels** | 비어 있음 | **Hide this channel**로 추가한 채널입니다. **Remove**로 뺍니다. |

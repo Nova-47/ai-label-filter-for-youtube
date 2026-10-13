@@ -3,7 +3,7 @@
 // active tab's content script, so no `tabs` permission is needed.
 const A = globalThis.AILF;
 const RAW_ORIGIN = 'https://raw.githubusercontent.com/*';
-const DEFAULTS = { enabled: true, mode: 'dim', lookups: false, aislist: false, onboarded: false };
+const DEFAULTS = { enabled: true, mode: 'dim', lookups: false, aislist: false, channelRule: true, onboarded: false };
 const REASONS = {
   label: 'YouTube AI label',
   channel: 'Channel with mostly AI-labelled videos',
@@ -86,6 +86,7 @@ async function render() {
   for (const r of document.querySelectorAll('input[name="mode"]')) r.checked = r.value === settings.mode;
   $('lookups').checked = settings.lookups;
   $('aislist').checked = settings.aislist;
+  $('channelRule').checked = settings.channelRule;
 
   const paused = A.breakerOpen(got.breaker);
   $('paused').hidden = !paused;
@@ -110,7 +111,7 @@ async function render() {
 
   renderChannels('blocked', got.blocked);
   renderChannels('allowed', got.allowed);
-  const flagged = Object.values(got.channels || {}).filter(A.isAutoFlagged).length;
+  const flagged = settings.channelRule ? Object.values(got.channels || {}).filter(A.isAutoFlagged).length : 0;
   $('flagged').textContent = flagged
     ? `${flagged} channel${flagged > 1 ? 's' : ''} dimmed for having mostly AI-labelled videos.` : '';
 
@@ -135,6 +136,7 @@ async function turnListOff() {
 
 $('enabled').addEventListener('change', (e) => saveSettings({ enabled: e.target.checked }));
 $('lookups').addEventListener('change', (e) => saveSettings({ lookups: e.target.checked }));
+$('channelRule').addEventListener('change', (e) => saveSettings({ channelRule: e.target.checked }));
 for (const r of document.querySelectorAll('input[name="mode"]')) {
   r.addEventListener('change', () => saveSettings({ mode: r.value }));
 }

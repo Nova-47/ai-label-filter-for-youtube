@@ -33,6 +33,7 @@ WHAT IT DOES
 • Of the last 20 different videos from a channel checked on your device, if at least 5 were checked, at least 2 are labelled and at least 60% are labelled, its other videos are dimmed with that reason, never hidden
 • Dim + reason (default): fades the card and adds a reason chip with "Show" and "Allow channel"
 • Hide: removes filtered cards; "Reveal" in the popup shows hidden cards on the page
+• "Also dim channels whose recent videos are mostly AI-labelled" (on by default): turns the channel rule above on or off
 • Optional "Check every visible video" (off by default): asks YouTube about each visible video, one request at a time across all tabs and at least 1 second apart, then saves the result
 • Popup: counts by reason for the open page, Hidden channels and Always shown channels lists, and an on/off switch
 
@@ -67,6 +68,7 @@ YouTube 라벨은 AI 생성 콘텐츠 일부에만 붙습니다. 라벨이 없�
 • 이 기기에서 채널의 서로 다른 영상을 마지막으로 확인한 20개 중 확인한 영상이 5개 이상, AI 라벨 영상이 2개 이상, 비율이 60% 이상인 채널의 다른 영상은 라벨이 없어도 숨기지 않고 이유와 함께 흐리게 표시합니다
 • "Dim + reason"(기본값): 카드를 흐리게 하고 이유, "Show", "Allow channel" 버튼이 있는 칩을 표시합니다
 • "Hide": 걸러진 카드를 숨깁니다. 팝업의 "Reveal"로 현재 페이지에서 숨긴 카드를 볼 수 있습니다
+• "Also dim channels whose recent videos are mostly AI-labelled"(기본 켜짐): 위 채널 규칙을 켜거나 끕니다
 • 선택 기능 "Check every visible video"(기본 꺼짐): 화면에 보이는 영상을 모든 탭에서 한 번에 하나씩, 최소 1초 간격으로 YouTube에 확인하고 결과를 저장합니다
 • 팝업: 현재 페이지의 이유별 개수, "Hidden channels"와 "Always shown channels" 목록, 켜기/끄기 스위치를 보여 줍니다
 

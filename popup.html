@@ -233,6 +233,15 @@
       </div>
     </div>
     <div class="row">
+      <span>Also dim channels whose recent videos are mostly AI-labelled</span>
+      <label class="toggle">
+        <input type="checkbox" id="channelRule" aria-label="Also dim channels whose recent videos are mostly AI-labelled" />
+        <span class="slider"></span>
+      </label>
+    </div>
+    <p class="muted" style="margin-top:4px">On by default. Of the last 20 different videos checked from a channel: at least 5
+      checked, at least 2 labelled, at least 60%. Its other videos are dimmed with that reason, never hidden.</p>
+    <div class="row">
       <span>Check every visible video</span>
       <label class="toggle">
         <input type="checkbox" id="lookups" aria-label="Check every visible video" />
