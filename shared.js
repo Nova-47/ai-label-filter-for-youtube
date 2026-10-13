@@ -244,14 +244,20 @@
   //   ok       a canary still shows the label
   //   error    YouTube refused the request or sent an unusable reply (warn)
   //   unknown  offline, paused or blocked: no news (the popup shows pauses)
-  //   broken   every canary is there and none is labelled (warn)
-  //   missing  a canary is gone (removed or private) and the others are not
-  //            labelled: can't tell, no warning; time to pick new canaries
+  //   broken   the label can't be found (warn): every canary is there and
+  //            none is labelled; or a canary's owner reads but its label
+  //            can't (`ai: null`); or no canary reads at all. A changed reply
+  //            shape looks like the last two, two canaries gone at once rarely
+  //   missing  mixed: one canary is gone (removed or private, nothing reads)
+  //            and the other is not labelled: can't tell, no warning; time to
+  //            pick new canaries
   function selfcheckVerdict(results) {
     if (results.some((r) => r.kind === 'ok' && r.ai === true)) return 'ok';
     if (results.some((r) => r.kind === 'bad')) return 'error';
     if (!results.length || results.some((r) => r.kind !== 'ok')) return 'unknown';
-    return results.length >= 2 && results.every((r) => r.ai === false) ? 'broken' : 'missing';
+    if (results.some((r) => r.ai === null && (r.ucid || r.handle))) return 'broken';
+    const all = (ai) => results.every((r) => r.ai === ai);
+    return results.length >= 2 && (all(false) || all(null)) ? 'broken' : 'missing';
   }
 
   // ── Card lookup queue (Tier 2) ─────────────────────────────────────────────

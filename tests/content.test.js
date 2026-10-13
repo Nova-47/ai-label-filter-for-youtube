@@ -167,16 +167,20 @@ test('self-check: one run per day across tabs; first labelled canary ends it', a
 });
 
 // Review E4 and M2: a refused request used to end as "unknown" (no warning),
-// a reply without the video as "broken" (false warning).
-test('self-check: HTTP 400 warns, canaries gone do not', async () => {
+// one canary gone as "broken" (false warning). Review N1: nothing readable
+// (a changed reply shape) used to end as "missing" (no warning).
+test('self-check: HTTP 400 and unreadable labels warn, one canary gone does not', async () => {
   const run = async (respond) => {
     const b = browser({ respond });
     b.tab('https://www.youtube.com/');
     await b.run(10000);
     return [b.store.selfcheck.state, b.requests.length];
   };
+  const renamed = fixture('labelled-yHG-pivADos.json').replaceAll('videoPrimaryInfoRenderer', 'videoPrimaryInfoRendererV2');
   assert.deepEqual(await run(() => reply(400, '{"error":{}}')), ['error', 1]);
-  assert.deepEqual(await run(() => reply(200, '{}')), ['missing', 2]);
+  assert.deepEqual(await run(() => reply(200, '{}')), ['broken', 2]);
+  assert.deepEqual(await run(() => reply(200, renamed)), ['broken', 2]);  // owner reads, label can't (review X2)
+  assert.deepEqual(await run((r) => reply(200, r.videoId === LABELLED ? '{}' : fixture('normal-dQw4w9WgXcQ.json'))), ['missing', 2]);
   assert.deepEqual(await run(() => reply(200, fixture('normal-dQw4w9WgXcQ.json'))), ['broken', 2]);
   assert.deepEqual(await run(() => new Error('offline')), ['unknown', 1]);
 });

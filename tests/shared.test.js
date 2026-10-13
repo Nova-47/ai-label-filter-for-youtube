@@ -268,6 +268,8 @@ test('selfcheckVerdict: table', () => {
   const r = (status, body) => A.readResponse(status, 'basic', body);
   const LAB = JSON.stringify(fixture('labelled-yHG-pivADos.json'));
   const UNL = JSON.stringify(fixture('normal-dQw4w9WgXcQ.json'));
+  const RENAMED = LAB.replaceAll('videoPrimaryInfoRenderer', 'videoPrimaryInfoRendererV2'); // owner reads, label can't
+  const NO_OWNER = '{"contents":{"twoColumnWatchNextResults":{"results":{"results":{"contents":[{"videoPrimaryInfoRenderer":{}}]}}}}}';
   const net = { kind: 'network' };
   const cases = [
     [[r(200, LAB)], 'ok'],
@@ -280,9 +282,15 @@ test('selfcheckVerdict: table', () => {
     [[r(200, '<html>consent</html>')], 'error'],
     [[r(200, UNL), r(400, '{}')], 'error'],
     [[r(200, UNL), r(200, UNL)], 'broken'],
-    [[r(200, '{}'), r(200, '{}')], 'missing'],      // both gone (removed/private)
-    [[r(200, UNL), r(200, '{}')], 'missing'],
+    [[r(200, '{}'), r(200, '{}')], 'broken'],       // nothing reads: shape changed, or both gone (review N1)
+    [[r(200, RENAMED), r(200, RENAMED)], 'broken'],
+    [[r(200, RENAMED), r(200, UNL)], 'broken'],     // the video is there, its label unreadable
+    [[r(200, UNL), r(200, RENAMED)], 'broken'],
+    [[r(200, RENAMED)], 'broken'],
+    [[r(200, NO_OWNER), r(200, UNL)], 'broken'],    // reads as unlabelled, no owner: not "gone"
+    [[r(200, UNL), r(200, '{}')], 'missing'],       // one gone, the other unlabelled
     [[r(200, '{}'), r(200, UNL)], 'missing'],
+    [[r(200, '{}')], 'missing'],
     [[r(200, UNL)], 'missing'],                     // one unlabelled canary alone never says broken
     [[net], 'unknown'],
     [[r(200, UNL), net], 'unknown'],
