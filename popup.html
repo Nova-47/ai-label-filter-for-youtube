@@ -196,28 +196,27 @@
 
   <section id="paused" class="alert" hidden></section>
   <section id="broken" class="alert bad" hidden>
-    <span id="broken-why">Label detection may be broken (YouTube may have changed something).</span>
-    Please update the extension or
-    <a href="https://github.com/Nova-47/ai-label-filter-for-youtube/issues" target="_blank" rel="noopener">report it</a>.
+    <span id="broken-why">Couldn't read the label. YouTube may have changed something.</span>
+    Update the extension or
+    <a href="https://github.com/Nova-47/ai-label-filter-for-youtube/issues" target="_blank" rel="noopener">report the problem</a>.
   </section>
 
   <section id="page">
     <h2>This page</h2>
-    <div id="counts" class="muted">Open a YouTube tab to see what was filtered there.</div>
+    <div id="counts" class="muted">Open a YouTube tab to see filtered videos.</div>
     <div class="row" id="peek-row" hidden>
-      <span class="muted">Hidden videos are removed from view.</span>
+      <span class="muted">Hidden videos aren't shown.</span>
       <button type="button" id="peek">Reveal</button>
     </div>
   </section>
 
   <section id="onboarding" hidden>
     <h2>Community list (optional)</h2>
-    <p>YouTube's own AI label is only on a small share of AI videos. You can also hide channels
-      listed in <a href="https://github.com/Override92/AiSList" target="_blank" rel="noopener">AiSList</a>,
-      a community-maintained list (CC BY-NC 4.0, about 29,000 channels, with its own
-      false-positive review process).</p>
-    <p class="muted" style="margin-top:6px">Turning it on downloads the list from raw.githubusercontent.com
-      once a day; Chrome will ask for that permission. Nothing about you is sent.</p>
+    <p>YouTube labels only a small share of AI videos. You can also hide channels in
+       <a href="https://github.com/Override92/AiSList" target="_blank" rel="noopener">AiSList</a>,
+      a community-maintained list (CC BY-NC 4.0, about 29,000 channels) with a false-positive review process.</p>
+    <p class="muted" style="margin-top:6px">When enabled, the list downloads from raw.githubusercontent.com
+      once a day. Chrome will ask for permission. No data about you is sent.</p>
     <div class="row" style="margin-top:10px; justify-content:flex-end">
       <button type="button" id="list-later">Not now</button>
       <button type="button" class="primary" id="list-on">Turn on</button>
@@ -240,8 +239,8 @@
         <span class="slider"></span>
       </label>
     </div>
-    <p class="muted" style="margin-top:4px">Off by default. When on, sends one small request to YouTube per
-      visible video (at most one per second) to read its label. If YouTube pushes back, requests pause for 15 min to 24 h.</p>
+    <p class="muted" style="margin-top:4px">Off by default. When enabled, sends one small request to YouTube for each
+      visible video (at most one per second) to read the label. If YouTube pushes back, requests pause for 15 min to 24 h.</p>
     <div class="row" id="list-row">
       <span>Hide channels listed in AiSList</span>
       <label class="toggle">
@@ -254,14 +253,14 @@
       <button type="button" class="link" id="list-refresh">Refresh now</button>
       <div>List by <a href="https://github.com/Override92/AiSList" target="_blank" rel="noopener">Override92/AiSList</a>,
         <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">CC BY-NC 4.0</a>.
-        Wrongly listed channel? Use <b>Allow channel</b> and report it to the list.</div>
+        If a channel is listed by mistake, use <b>Allow channel</b> and report it to the list.</div>
     </div>
   </section>
 
   <section>
     <h2>Hidden channels</h2>
     <ul id="blocked"></ul>
-    <p class="muted" id="blocked-empty">None yet. Use "Hide this channel" on a labelled video.</p>
+    <p class="muted" id="blocked-empty">None. Use "Hide this channel" on a labelled video.</p>
   </section>
 
   <section>

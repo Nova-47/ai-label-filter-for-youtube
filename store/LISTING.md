@@ -20,29 +20,29 @@ Dim videos YouTube labels as made with AI and show why, or hide them. Also chann
 **Description (English):**
 
 ```
-Dim or hide AI-labelled videos on YouTube, and always see why a video was filtered.
+Dim or hide YouTube videos labelled as made with AI, and see why each video was filtered.
 
-AI Label Filter for YouTube uses YouTube's own "Made with AI" label. It does not guess from titles, thumbnails or a detection model, so it only filters a video when there is a concrete reason you can see.
+AI Label Filter for YouTube uses YouTube's own "Made with AI" label. It does not guess from titles, thumbnails, or a detection model. A video is filtered only when there is a reason you can see.
 
-BE AWARE: MANY AI VIDEOS ARE NOT LABELLED
-YouTube's label covers only part of AI-generated content, and many AI videos have none. This extension is precise, not complete. For broader coverage you can turn on AiSList, a community-maintained list of AI channels with its own review and removal process (off by default).
+MANY AI VIDEOS ARE NOT LABELLED
+YouTube labels only some AI-generated content. Many AI videos have no label. This extension is precise, not complete. For broader coverage, turn on AiSList, a community-maintained list of AI channels with its own review and removal process (off by default).
 
 WHAT IT DOES
-• On a video page: if YouTube labels the video as made with AI, a banner offers "Hide this channel" or "Dismiss"
-• In feeds: filters cards of videos already known to be labelled, channels you hid, and (optional) channels listed in AiSList
+• On a video page: if YouTube labels a video as made with AI, a banner offers "Hide this channel" or "Dismiss"
+• In feeds: filters cards for labelled videos, channels you hid, and optionally channels listed in AiSList
 • Unlabelled videos from channels with 2 or more labelled videos are dimmed with that reason, never hidden
-• Dim + reason (default): the card is faded and a chip says why, with "Show" and "Allow channel" buttons
-• Hide: filtered cards are removed; "Reveal" in the popup shows what was hidden on the page
-• Optional "Check every visible video" (off by default): asks YouTube about each video on screen, one request at a time across all tabs, at least 1 second apart, and saves the results
-• Popup with counts per reason for the open page, your Hidden channels and Always shown channels lists, and an on/off switch
+• Dim + reason (default): fades the card and adds a reason chip with "Show" and "Allow channel"
+• Hide: removes filtered cards; "Reveal" in the popup shows hidden cards on the page
+• Optional "Check every visible video" (off by default): asks YouTube about each visible video, one request at a time across all tabs and at least 1 second apart, then saves the result
+• Popup: counts by reason for the open page, Hidden channels and Always shown channels lists, and an on/off switch
 
-SAFE BY DEFAULT
-• If anything goes wrong, videos are shown, not hidden
-• If YouTube pushes back (HTTP 403 or 429, a redirect, or its "Sorry" page), all requests stop for 24 hours; other refusals pause requests for 15 minutes, doubling up to 24 hours
-• Once a day it checks up to two videos known to carry the label, and the popup warns you if the label can no longer be read or YouTube refuses the check
+SAFE DEFAULTS
+• If something fails, videos are shown, not hidden
+• If YouTube pushes back (HTTP 403 or 429, a redirect, or its "Sorry" page), all requests stop for 24 hours. Other refusals pause requests for 15 minutes, doubling up to 24 hours
+• Once a day, it checks up to two videos known to have the label. The popup warns you if the label can no longer be read or YouTube refuses the check
 
 PRIVACY
-No server, no account, no analytics. Nothing is sent to the developer. To read the label, the extension sends a small request about the video to YouTube itself, from the YouTube page, without your cookies. If you turn on AiSList, the list is downloaded from GitHub at most once a day. All settings and results stay in your browser.
+No server, account, or analytics. Nothing is sent to the developer. To read the label, the extension sends a small request about the video to YouTube from the YouTube page, without your cookies. If you turn on AiSList, the list is downloaded from GitHub at most once a day. Settings and results stay in your browser.
 
 Open source (MIT): https://github.com/Nova-47/ai-label-filter-for-youtube
 
@@ -54,29 +54,29 @@ This extension is not affiliated with, endorsed by, or sponsored by YouTube or G
 **Description (Korean, optional localized listing):** the UI is English only, so button and setting names are quoted in English.
 
 ```
-YouTube에서 AI 라벨이 붙은 영상을 흐리게 하거나 숨기고, 왜 걸렀는지 항상 보여 줍니다.
+YouTube에서 AI 라벨이 붙은 영상을 흐리게 하거나 숨기고, 걸러진 이유를 보여 줍니다.
 
-AI Label Filter for YouTube는 YouTube 자체의 "AI로 제작됨(Made with AI)" 라벨을 씁니다. 제목·썸네일·탐지 모델로 추측하지 않으므로, 확인할 수 있는 구체적인 이유가 있을 때만 영상을 거릅니다.
+AI Label Filter for YouTube는 YouTube의 "AI로 제작됨(Made with AI)" 라벨만 사용합니다. 제목, 썸네일, 탐지 모델로 추측하지 않습니다. 확인할 수 있는 이유가 있을 때만 영상을 거릅니다.
 
-알아 두세요: 라벨 없는 AI 영상이 많습니다
-YouTube 라벨은 AI 생성 콘텐츠의 일부에만 붙고, 라벨이 없는 AI 영상이 많습니다. 이 확장은 정확하지만 완전하지 않습니다. 더 넓게 거르려면 AiSList를 켤 수 있습니다. 커뮤니티가 관리하는 AI 채널 목록으로, 자체 검토·삭제 요청 절차가 있습니다(기본 꺼짐).
+라벨 없는 AI 영상이 많습니다
+YouTube 라벨은 AI 생성 콘텐츠 일부에만 붙습니다. 라벨이 없는 AI 영상도 많습니다. 이 확장 프로그램은 정확하지만 모든 AI 영상을 찾지는 못합니다. 더 넓게 거르려면 AiSList를 켜세요. AiSList는 커뮤니티가 관리하는 AI 채널 목록이며 자체 검토와 삭제 요청 절차가 있습니다(기본 꺼짐).
 
 기능
-• 시청 페이지: YouTube가 AI 제작 라벨을 붙인 영상이면 "Hide this channel"(이 채널 숨기기) / "Dismiss"(닫기) 배너 표시
-• 피드: 라벨이 확인된 영상, 직접 숨긴 채널, (선택) AiSList에 있는 채널의 카드를 거름
-• 라벨 영상이 2개 이상인 채널의, 라벨 없는 다른 영상은 숨기지 않고 그 이유와 함께 흐리게 표시
-• "Dim + reason"(기본값): 카드를 흐리게 하고 이유와 "Show", "Allow channel" 버튼이 있는 칩을 붙임
-• "Hide": 걸러진 카드를 없앰. 팝업의 "Reveal"로 그 페이지에서 숨긴 카드를 볼 수 있음
-• 선택 기능 "Check every visible video"(기본 꺼짐): 화면에 보이는 영상을 모든 탭을 통틀어 한 번에 하나씩, 최소 1초 간격으로 YouTube에 묻고 결과를 저장
-• 팝업: 열린 페이지의 이유별 개수, "Hidden channels"와 "Always shown channels" 목록, 켜기/끄기 스위치
+• 시청 페이지: YouTube가 AI 제작 라벨을 붙인 영상에 "Hide this channel"(이 채널 숨기기) 또는 "Dismiss"(닫기) 배너를 표시합니다
+• 피드: 라벨이 확인된 영상, 직접 숨긴 채널, 선택한 경우 AiSList에 있는 채널의 카드를 거릅니다
+• AI 라벨이 붙은 영상이 2개 이상인 채널의 다른 영상은 라벨이 없어도 숨기지 않고 이유와 함께 흐리게 표시합니다
+• "Dim + reason"(기본값): 카드를 흐리게 하고 이유, "Show", "Allow channel" 버튼이 있는 칩을 표시합니다
+• "Hide": 걸러진 카드를 숨깁니다. 팝업의 "Reveal"로 현재 페이지에서 숨긴 카드를 볼 수 있습니다
+• 선택 기능 "Check every visible video"(기본 꺼짐): 화면에 보이는 영상을 모든 탭에서 한 번에 하나씩, 최소 1초 간격으로 YouTube에 확인하고 결과를 저장합니다
+• 팝업: 현재 페이지의 이유별 개수, "Hidden channels"와 "Always shown channels" 목록, 켜기/끄기 스위치를 보여 줍니다
 
-기본적으로 안전하게
-• 문제가 생기면 영상을 숨기지 않고 보여 줍니다
-• YouTube가 거부하면(HTTP 403·429, 리다이렉트, "Sorry" 페이지) 모든 요청을 24시간 멈추고, 그 밖의 거부에는 15분부터 시작해 최대 24시간까지 두 배씩 늘려 멈춥니다
-• 하루 1회 라벨이 붙은 영상을 최대 두 개 확인해서, 라벨을 더 읽을 수 없거나 YouTube가 확인을 거부하면 팝업에서 알려 줍니다
+안전 기본값
+• 문제가 생기면 영상을 숨기지 않고 표시합니다
+• YouTube가 거부하면(HTTP 403·429, 리다이렉트, "Sorry" 페이지) 모든 요청을 24시간 멈춥니다. 그 밖의 거부에는 15분부터 시작해 최대 24시간까지 두 배씩 늘려 멈춥니다
+• 하루에 한 번 라벨이 붙은 영상 최대 두 개를 확인합니다. 라벨을 읽을 수 없거나 YouTube가 확인을 거부하면 팝업에 알립니다
 
 개인정보
-서버, 계정, 분석 도구가 없습니다. 개발자에게는 아무것도 전송되지 않습니다. 라벨을 읽기 위해 영상에 대한 작은 요청을 YouTube 페이지에서 YouTube로 직접, 쿠키 없이 보냅니다. AiSList를 켜면 목록을 GitHub에서 하루에 최대 한 번 내려받습니다. 모든 설정과 결과는 브라우저 안에만 저장됩니다.
+서버, 계정, 분석 도구가 없습니다. 개발자에게 전송되는 정보는 없습니다. 라벨을 읽기 위해 YouTube 페이지에서 YouTube로 영상에 대한 작은 요청을 쿠키 없이 보냅니다. AiSList를 켜면 목록을 GitHub에서 하루에 최대 한 번 내려받습니다. 설정과 결과는 브라우저에만 저장됩니다.
 
 오픈소스 (MIT): https://github.com/Nova-47/ai-label-filter-for-youtube
 
