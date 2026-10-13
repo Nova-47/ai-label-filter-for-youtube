@@ -22,8 +22,7 @@ test('watch page: one masked lookup → banner → verdict and channel saved', a
   const v = b.store.verdicts[LABELLED];
   assert.deepEqual([v[0], v[3], v[4]], [1, U, 'eigi_and_ai']);
   assert.equal(b.store.channels[U].h, 'eigi_and_ai');
-  assert.deepEqual(b.store.channels[U].ai, [LABELLED]);
-  assert.deepEqual(b.store.channels[U].ok, []);
+  assert.deepEqual(b.store.channels[U].v, [[LABELLED, 1]]);
   t.navigate(watch(LABELLED) + '&t=5');                   // cached now: no new request
   await b.run(5000);
   assert.equal(b.requests.length, 1);
@@ -260,7 +259,7 @@ test('saving: two tabs saving at once both keep their verdicts', async () => {
   await b.run(30000);
   assert.deepEqual(Object.keys(b.store.verdicts).sort(), ['dQw4w9WgXcQ', 'nG8aoy69iIo']);
   assert.deepEqual(Object.keys(b.store.channels).sort(), ['UC8F8MJyWevV2EzzLxZnSRLg', 'UCuAXFkgsw1L7xaCfnd5JJOw']);
-  assert.deepEqual(Object.values(b.store.channels).map((c) => c.ok).flat().sort(), ['dQw4w9WgXcQ', 'nG8aoy69iIo']); // clean verdicts count as checked
+  assert.deepEqual(Object.values(b.store.channels).flatMap((c) => c.v).map(String).sort(), ['dQw4w9WgXcQ,0', 'nG8aoy69iIo,0']); // clean verdicts count as checked
 });
 
 test('saving: seen-day updates alone write nothing; only changed keys are written', async () => {
@@ -289,7 +288,7 @@ test('saving: a channel changed while its save is being written is saved again',
   await b.run(3500);                                    // the first save is being written
   t.navigate(watch('uxZZg64CUDM'));                     // same channel, labelled too
   await b.run(20000);
-  assert.deepEqual(b.store.channels[U].ai, [LABELLED, 'uxZZg64CUDM']);
+  assert.deepEqual(b.store.channels[U].v, [[LABELLED, 1], ['uxZZg64CUDM', 1]]);
 });
 
 test('card lookups: a card that scrolls away while waiting for the lock is skipped', async () => {
@@ -315,14 +314,14 @@ test('card lookups: a card that scrolls away while waiting for the lock is skipp
 test('auto-flagged channel: marked "channel" with chip, and the CSS never hides it', async () => {
   const b = browser();
   const U = 'UCMMmm45yro8eyHzadofoG4A';
-  Object.assign(b.store, { selfcheck: { at: b.now() }, channels: { [U]: { h: 'foreverharmony_official', ai: ['v1', 'v2', 'v3'], ok: ['v4'] } } });
+  Object.assign(b.store, { selfcheck: { at: b.now() }, channels: { [U]: { h: 'foreverharmony_official', v: [['v1', 1], ['v2', 1], ['v3', 1], ['v4', 0]] } } });
   const t = b.tab('https://www.youtube.com/');
   const flagged = t.addCard('aaaaaaaaaaa', '/@ForeverHarmony_Official');
   const plain = t.addCard('bbbbbbbbbbb', '/@someoneelse');
   await b.run(1000);
   assert.equal(flagged.dataset.ailf, 'channel');
   assert.equal(flagged.children[0].className, 'ailf-chip');
-  assert.equal(flagged.children[0].firstChild.textContent, 'Channel: 3 of 4 checked videos labelled');
+  assert.equal(flagged.children[0].firstChild.textContent, 'Channel: 3 of 4 checked videos AI-labelled');
   assert.equal(flagged.children[0].lastChild.hidden, false);       // "Allow channel"
   assert.equal('ailf' in plain.dataset, false);
   const css = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'content.css'), 'utf8');

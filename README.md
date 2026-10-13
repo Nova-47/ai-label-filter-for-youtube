@@ -67,7 +67,7 @@ In this order:
 1. **Always shown channels**: a channel on this list is never filtered.
 2. **Hidden channels**: you added the channel with **Hide this channel**. Chip: "Your blocklist".
 3. **YouTube AI label**: the video itself is labelled. Chip: "YouTube AI label".
-4. **Channel where most checked videos are labelled**: of the different videos from this channel checked on your device, at least 2 are labelled and at least 60% are labelled. A video checked again counts once. Chip: "Channel: N of M checked videos labelled". These cards are always dimmed with their reason, never hidden, even in Hide mode, because this is an inference rather than a label on the video.
+4. **Channel where most checked videos are labelled**: counted over the last 20 checked videos from that channel on your device, there are at least 3 videos, at least 2 of them labelled, and at least 60% labelled. A video checked again counts once, with its latest result. Chip: "Channel: N of M checked videos AI-labelled", where M is the number of videos in that sample (at most 20). These cards are always dimmed with their reason, never hidden, even in Hide mode, because this is an inference rather than a label on the video.
 5. **Listed in AiSList**: only if you turned AiSList on. Chip: "Listed in AiSList".
 
 Cards that match no rule are shown. Rules 1, 2, 4 and 5 need a channel link on the card (a `/@handle` or `/channel/UC…` link).
@@ -139,7 +139,7 @@ Everything is stored in `chrome.storage.local` on your device. Nothing is stored
 - your settings
 - Hidden channels and Always shown channels (channel ID and/or @handle, and when it was added)
 - results per video: video ID, labelled or not, the day it was checked and the day its card was last seen; for labelled videos also the channel ID and @handle. At most 20,000 videos.
-- per channel seen in a reply: its ID, its @handle, the IDs of up to 10 of its labelled and up to 10 of its unlabelled videos, and the day of its last result. At most 5,000 channels; past that, channels with fewer labelled videos and not seen for longer are dropped first, and dimmed channels or channels on your lists are always kept.
+- per channel seen in a reply: its ID, its @handle, the IDs of its last 20 checked videos with whether each is labelled, and the day of its last result. At most 5,000 channels; past that, channels with fewer labelled videos and not seen for longer are dropped first, and dimmed channels or channels on your lists are always kept.
 - if AiSList is on: the downloaded list and its download details (entry count, ETag, times, last error)
 - whether requests are paused, until when and why, and when the last request was sent
 - when the self-check last ran and its result

@@ -6,7 +6,7 @@ const RAW_ORIGIN = 'https://raw.githubusercontent.com/*';
 const DEFAULTS = { enabled: true, mode: 'dim', lookups: false, aislist: false, onboarded: false };
 const REASONS = {
   label: 'YouTube AI label',
-  channel: 'Channel with mostly labelled videos',
+  channel: 'Channel with mostly AI-labelled videos',
   blocked: 'Your hidden channels',
   aislist: 'Listed in AiSList',
 };
