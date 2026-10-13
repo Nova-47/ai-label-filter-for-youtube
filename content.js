@@ -381,7 +381,7 @@
     const vid = currentVideoId();
     if (!vid) return;
     let ai = A.cacheGet(cache, vid, A.today());
-    let owner = cacheOwner(vid);
+    let owner = A.cacheOwner(cache, vid);
     if (ai === null) {
       const info = await lookup(vid);
       if (!info) return;
@@ -390,8 +390,6 @@
     }
     if (ai === true && gen === navGen && settings.enabled) showBanner(owner);
   }
-
-  const cacheOwner = (vid) => A.cacheOwner(cache, vid);
 
   function removeBanner() {
     const b = document.getElementById('ailf-banner');
