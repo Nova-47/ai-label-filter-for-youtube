@@ -67,6 +67,20 @@ test('requests: a block in one tab stops the request already queued in another',
   assert.equal(b.store.breaker.reason, 'HTTP 429');
 });
 
+// Review N5: a reply that never comes must not hold the lock for good.
+test('requests: a hung request times out after 10 s and frees the lock', async () => {
+  const b = browser({ respond: (r) => (r.videoId === 'aaaaaaaaaaa' ? null : reply(200, fixture('normal-dQw4w9WgXcQ.json'))) });
+  b.store.selfcheck = { at: b.now() };
+  b.tab(watch('aaaaaaaaaaa'));
+  await b.run(50);
+  b.tab(watch('bbbbbbbbbbb'));                      // waits for the lock
+  await b.run(30000);
+  assert.deepEqual(b.requests.map((r) => r.videoId), ['aaaaaaaaaaa', 'bbbbbbbbbbb']);
+  assert.equal(b.requests[1].at - b.requests[0].at, 10000 + 1000); // timeout, then the 1 s gap
+  assert.equal('breaker' in b.store, false);        // no reply is not a refusal
+  assert.ok(b.store.verdicts.bbbbbbbbbbb);
+});
+
 // Review E2: the mask rejected used to cost two requests per video, the
 // second one ~400 KB.
 test('requests: a rejected mask is remembered, never retried unmasked, and backs off', async () => {

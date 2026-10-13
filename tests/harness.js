@@ -79,6 +79,7 @@ function browser({ latency = 0, setLatency = latency, eventMs = 0, netMs = 100, 
   };
 
   // fetch: logs each request; `inflight` tracks concurrency across tabs.
+  // `respond` returning null means the request hangs until its signal aborts.
   const requests = [];
   let inflight = 0;
   let maxInflight = 0;
@@ -88,12 +89,25 @@ function browser({ latency = 0, setLatency = latency, eventMs = 0, netMs = 100, 
       clientVersion: body.context.client.clientVersion, credentials: opts.credentials };
     requests.push(req);
     maxInflight = Math.max(maxInflight, ++inflight);
-    return new Promise((res, rej) => setTimeout(() => {
-      inflight--;
-      const r = respond(req);
-      if (r instanceof Error) return rej(r);
-      res({ status: r.status, ok: r.status >= 200 && r.status < 300, type: r.type || 'basic', text: async () => r.body || '' });
-    }, netMs));
+    return new Promise((res, rej) => {
+      let done = false;
+      const settle = (fn) => { if (!done) { done = true; inflight--; fn(); } };
+      if (opts.signal) opts.signal.onabort = () => settle(() => rej(new Error('TimeoutError')));
+      setTimeout(() => {
+        const r = respond(req);
+        if (r === null) return;
+        settle(() => (r instanceof Error ? rej(r)
+          : res({ status: r.status, ok: r.status >= 200 && r.status < 300, type: r.type || 'basic', text: async () => r.body || '' })));
+      }, netMs);
+    });
+  };
+  // AbortSignal.timeout on the virtual clock.
+  const AbortSignal = {
+    timeout(ms) {
+      const signal = { onabort: null };
+      setTimeout(() => { if (signal.onabort) signal.onabort(); }, ms);
+      return signal;
+    },
   };
 
   class FakeDate extends Date {
@@ -137,7 +151,7 @@ function browser({ latency = 0, setLatency = latency, eventMs = 0, netMs = 100, 
     }
     const ctx = vm.createContext({
       console, structuredClone, setTimeout, clearTimeout, fetch, Date: FakeDate, document, location,
-      navigator: { locks }, AbortSignal: { timeout: () => undefined }, Element: class {},
+      navigator: { locks }, AbortSignal, Element: class {},
       IntersectionObserver, MutationObserver,
       window: { addEventListener: (name, fn) => { win[name] = fn; } },
       chrome: {
