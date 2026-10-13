@@ -1,6 +1,10 @@
 // Content script for www.youtube.com (isolated world). Pure logic lives in
 // shared.js (loaded first as `AILF`); this file does the DOM, the requests
 // and storage. Rule everywhere: when anything fails, the video is shown.
+//
+// The card container list and the clientVersion lookup are adapted from
+// Weedout for YouTube (https://github.com/masteranza/weedout-for-youtube),
+// Copyright (c) 2026 Weedout contributors, MIT License.
 (() => {
   'use strict';
 
@@ -152,8 +156,7 @@
   // isolated world can read it: no MAIN-world script, no page-JS hooks, no
   // window messaging. The value only changes on a full page load, so it is
   // read once per load. If it is missing we fall back to a known version;
-  // InnerTube accepted a 16-month-old version when tested. (Technique from
-  // Weedout for YouTube, MIT.)
+  // InnerTube accepted a 16-month-old version when tested.
   let clientVersion = null;
   function getClientVersion() {
     if (clientVersion) return clientVersion;
