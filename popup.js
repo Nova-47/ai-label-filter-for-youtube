@@ -6,7 +6,7 @@ const RAW_ORIGIN = 'https://raw.githubusercontent.com/*';
 const DEFAULTS = { enabled: true, mode: 'dim', lookups: false, aislist: false, onboarded: false };
 const REASONS = {
   label: 'YouTube AI label',
-  channel: 'Channel with 2+ labelled videos',
+  channel: 'Channel with mostly labelled videos',
   blocked: 'Your hidden channels',
   aislist: 'Listed in AiSList',
 };
@@ -112,7 +112,7 @@ async function render() {
   renderChannels('allowed', got.allowed);
   const flagged = Object.values(got.channels || {}).filter(A.isAutoFlagged).length;
   $('flagged').textContent = flagged
-    ? `${flagged} channel${flagged > 1 ? 's' : ''} dimmed for having 2+ AI-labelled videos.` : '';
+    ? `${flagged} channel${flagged > 1 ? 's' : ''} dimmed for having mostly AI-labelled videos.` : '';
 
   renderPage(await ask({ action: 'status' }));
 }

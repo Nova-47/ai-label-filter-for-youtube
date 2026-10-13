@@ -55,7 +55,7 @@ A video counts as AI only if the reply contains that badge: a `metadataBadgeRend
 | Where | Requests | What happens |
 |---|---|---|
 | Watch page (`/watch?v=…`) | 1 for the video you opened, unless its result is already saved | If the video is labelled, a banner offers **Hide this channel** and **Dismiss**. |
-| Feeds (default) | none | Cards are filtered only from what is already on your device: saved results, your channel lists, channels with 2+ labelled videos, and AiSList if it is on. |
+| Feeds (default) | none | Cards are filtered only from what is already on your device: saved results, your channel lists, channels where most checked videos are labelled, and AiSList if it is on. |
 | Feeds with **Check every visible video** on | 1 per card on screen that has no saved result | Labelled videos are filtered as they are found. |
 
 Cards are recognised on home, subscriptions, search, channel pages, playlists, the watch-page sidebar and Shorts shelves.
@@ -67,7 +67,7 @@ In this order:
 1. **Always shown channels**: a channel on this list is never filtered.
 2. **Hidden channels**: you added the channel with **Hide this channel**. Chip: "Your blocklist".
 3. **YouTube AI label**: the video itself is labelled. Chip: "YouTube AI label".
-4. **Channel with 2+ labelled videos**: the extension has seen at least two different labelled videos from this channel on your device. Chip: "Channel: N labelled videos". These cards are always dimmed with their reason, never hidden, even in Hide mode, because this is an inference rather than a label on the video.
+4. **Channel where most checked videos are labelled**: of the different videos from this channel checked on your device, at least 2 are labelled and at least 60% are labelled. A video checked again counts once. Chip: "Channel: N of M checked videos labelled". These cards are always dimmed with their reason, never hidden, even in Hide mode, because this is an inference rather than a label on the video.
 5. **Listed in AiSList**: only if you turned AiSList on. Chip: "Listed in AiSList".
 
 Cards that match no rule are shown. Rules 1, 2, 4 and 5 need a channel link on the card (a `/@handle` or `/channel/UC…` link).
@@ -77,7 +77,7 @@ Results are saved for 30 days for a video without the label (YouTube may add one
 ### What you see
 
 - **Dim + reason** (default): the card is faded and a chip shows the reason, with **Show** (shows that video normally in this tab until you reload) and **Allow channel** (adds the channel to Always shown channels; only offered when the card has a channel link).
-- **Hide**: filtered cards are removed from view, except cards filtered only because their channel has 2+ labelled videos, which stay dimmed. To see what was hidden, open the popup and press **Reveal** under "This page": that tab switches to the dimmed view, with the same chips, until you press **Hide again** or reload.
+- **Hide**: filtered cards are removed from view, except cards filtered only because most checked videos of their channel are labelled, which stay dimmed. To see what was hidden, open the popup and press **Reveal** under "This page": that tab switches to the dimmed view, with the same chips, until you press **Hide again** or reload.
 - **Watch page banner**: shown when the open video is labelled, in either mode. **Hide this channel** adds the channel to Hidden channels (the button is left out if the channel is unknown or already on that list). No banner appears for a channel on Always shown channels. The video itself is never hidden.
 
 If anything fails (network error, timeout, unexpected reply, removed video), the video is shown and nothing is saved.
@@ -139,7 +139,7 @@ Everything is stored in `chrome.storage.local` on your device. Nothing is stored
 - your settings
 - Hidden channels and Always shown channels (channel ID and/or @handle, and when it was added)
 - results per video: video ID, labelled or not, the day it was checked and the day its card was last seen; for labelled videos also the channel ID and @handle. At most 20,000 videos.
-- per channel seen in a reply: its ID, its @handle, the IDs of up to 5 of its labelled videos, and the day of its last result. At most 5,000 channels; past that, channels with fewer labelled videos and not seen for longer are dropped first, and channels with 2+ labelled videos or on your lists are always kept.
+- per channel seen in a reply: its ID, its @handle, the IDs of up to 10 of its labelled and up to 10 of its unlabelled videos, and the day of its last result. At most 5,000 channels; past that, channels with fewer labelled videos and not seen for longer are dropped first, and dimmed channels or channels on your lists are always kept.
 - if AiSList is on: the downloaded list and its download details (entry count, ETag, times, last error)
 - whether requests are paused, until when and why, and when the last request was sent
 - when the self-check last ran and its result
@@ -175,7 +175,7 @@ It does not ask for `tabs`, `history`, or "read and change all your data on all 
 
 Adding a channel to one list takes it off the other. **Remove** removes the channel whether it was added by @handle or by channel ID.
 
-The popup also shows how many cards were filtered on the open YouTube page for each reason, how many channels are dimmed for having 2+ labelled videos, and a warning when requests are paused or the self-check found a problem.
+The popup also shows how many cards were filtered on the open YouTube page for each reason, how many channels are dimmed because most of their checked videos are labelled, and a warning when requests are paused or the self-check found a problem.
 
 ---
 

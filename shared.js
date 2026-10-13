@@ -32,6 +32,8 @@
   const REQUEST_GAP_MS = 1000;   // between two YouTube requests, browser-wide
   const SELFCHECK_STALE_MS = 5 * 60000; // a self-check unfinished this long was cut off
   const AUTOFLAG_MIN_AI = 2;     // labelled videos needed to flag a channel
+  const AUTOFLAG_MIN_RATIO = 0.6; // and this share of its checked videos labelled
+  const CHANNEL_IDS_MAX = 10;    // video ids kept per channel, per verdict kind
 
   const AISLIST_URL =
     'https://raw.githubusercontent.com/Override92/AiSList/main/AiSList/aislist_blocklist.txt';
@@ -160,24 +162,51 @@
   }
 
   // ── Channel aggregates ─────────────────────────────────────────────────────
-  // channels: { ucid: { h: handle, ai: [videoIds], d: last verdict day } }.
-  // Labelled video ids are kept (max 5) so the same video is never counted twice.
+  // channels: { ucid: { h: handle, ai: [labelled ids], ok: [clean ids], d: last verdict day } }.
+  // "Checked" videos are the distinct ids in ai + ok, so a video checked again
+  // is never counted twice; a changed verdict moves its id to the other list.
+  // Each list keeps at most CHANNEL_IDS_MAX ids. The cap never makes a channel
+  // flagged that would not be with full counts: past the cap on the labelled
+  // side the true share is higher, past it on the clean side the capped share
+  // can reach at most 50%, and both full gives exactly 50%.
+  // Entries saved before `ok` existed only listed labelled videos, so their
+  // checked count is unknown: they are not flagged, and the next verdict for
+  // the channel starts a new sample (the old labelled ids are dropped).
   function recordVerdict(channels, ucid, handle, videoId, ai, day) {
     if (!isUcid(ucid)) return channels;
-    const c = channels[ucid] || (channels[ucid] = { h: null, ai: [] });
+    let c = channels[ucid];
+    if (!c || !Array.isArray(c.ok) || !Array.isArray(c.ai)) c = channels[ucid] = { h: (c && c.h) || null, ai: [], ok: [] };
     if (handle) c.h = handle;
     c.d = day;
-    if (ai && !c.ai.includes(videoId) && c.ai.length < 5) c.ai.push(videoId);
+    const [add, other] = ai ? [c.ai, c.ok] : [c.ok, c.ai];
+    const i = other.indexOf(videoId);
+    if (i >= 0) other.splice(i, 1);
+    if (!add.includes(videoId) && add.length < CHANNEL_IDS_MAX) add.push(videoId);
     return channels;
   }
 
-  // Two tabs may have updated the same channel; keep the union of both.
+  const isNewFormat = (c) => !!c && Array.isArray(c.ai) && Array.isArray(c.ok);
+
+  // Two tabs may have updated the same channel; keep the union of both. An
+  // old-format side (no `ok`) loses to a new-format one, as recordVerdict
+  // would have replaced it. `b` is this tab's copy and wins a verdict clash.
   function mergeChannel(a, b) {
     if (!a || !b) return a || b;
-    return { h: b.h || a.h, ai: [...new Set([...a.ai, ...b.ai])].slice(0, 5), d: Math.max(a.d || 0, b.d || 0) };
+    const d = Math.max(a.d || 0, b.d || 0), h = b.h || a.h || null;
+    if (isNewFormat(a) !== isNewFormat(b)) return { ...(isNewFormat(a) ? a : b), h, d };
+    if (!isNewFormat(a)) return { h, ai: [...new Set([...(a.ai || []), ...(b.ai || [])])].slice(0, 5), d };
+    const ai = [...new Set([...b.ai, ...a.ai.filter((v) => !b.ok.includes(v))])].slice(0, CHANNEL_IDS_MAX);
+    const ok = [...new Set([...b.ok, ...a.ok.filter((v) => !b.ai.includes(v))])].slice(0, CHANNEL_IDS_MAX);
+    return { h, ai, ok, d };
   }
 
-  const isAutoFlagged = (c) => !!c && Array.isArray(c.ai) && c.ai.length >= AUTOFLAG_MIN_AI;
+  // Labelled and checked counts of a channel, or null for an old-format entry.
+  const channelCounts = (c) => (isNewFormat(c) ? { ai: c.ai.length, checked: c.ai.length + c.ok.length } : null);
+
+  function isAutoFlagged(c) {
+    const n = channelCounts(c);
+    return !!n && n.ai >= AUTOFLAG_MIN_AI && n.ai / n.checked >= AUTOFLAG_MIN_RATIO;
+  }
 
   // Past `max` entries, drop down to 80%: channels without a labelled video
   // first, then the rest, least recently seen first. Auto-flagged channels
@@ -367,9 +396,9 @@
 
   const api = {
     NEXT_FIELDS, CANARY_IDS, TTL_CLEAN_DAYS, TTL_AI_DAYS, CACHE_MAX, CHANNELS_MAX, BREAKER_MS, RETRY_MS,
-    REQUEST_GAP_MS, SELFCHECK_STALE_MS, AUTOFLAG_MIN_AI, AISLIST_URL, DAY, QUEUE_MAX,
+    REQUEST_GAP_MS, SELFCHECK_STALE_MS, AUTOFLAG_MIN_AI, AUTOFLAG_MIN_RATIO, CHANNEL_IDS_MAX, AISLIST_URL, DAY, QUEUE_MAX,
     isAiBadge, parseNext, isUcid, normalizeHandle, channelFromHref, videoIdFromHref,
-    parseList, today, cacheGet, cachePut, cacheOwner, cachePrune, recordVerdict, mergeChannel, isAutoFlagged,
+    parseList, today, cacheGet, cachePut, cacheOwner, cachePrune, recordVerdict, mergeChannel, channelCounts, isAutoFlagged,
     channelsPrune, mergeDirty, mergeVerdict, isBlockedResponse, breakerOpen, breakerTrip, requestWait, backoff, readResponse,
     selfcheckDue, selfcheckVerdict, enqueue, takeNext, decide, channelKeys, buildIndex, listKeysFor, listPut, listDrop,
   };

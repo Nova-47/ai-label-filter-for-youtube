@@ -295,8 +295,8 @@
     aislist: () => 'Listed in AiSList',
     channel: (ch) => {
       const ucid = A.channelKeys(ch, idx).find(A.isUcid);
-      const n = (ucid && channels[ucid] && channels[ucid].ai.length) || A.AUTOFLAG_MIN_AI;
-      return `Channel: ${n} labelled videos`;
+      const n = ucid && A.channelCounts(channels[ucid]);
+      return n ? `Channel: ${n.ai} of ${n.checked} checked videos labelled` : 'Channel: mostly labelled videos';
     },
   };
 
