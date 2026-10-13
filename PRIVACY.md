@@ -2,11 +2,11 @@
 
 Last updated: 2026-10-13
 
-**This extension does not collect, sell, or share any personal or usage data. Nothing is ever sent to the developer. There is no server, no account, no analytics and no telemetry.**
+This extension does not collect, sell, or share personal or usage data. Nothing is sent to the developer. It has no server, account, analytics, or telemetry.
 
 ## What it stores
 
-Everything is kept in your browser's extension storage on your device (`chrome.storage.local`; nothing is stored in `chrome.storage.sync` or anywhere else):
+Everything is kept in your browser's extension storage on your device (`chrome.storage.local`). Nothing is stored in `chrome.storage.sync` or elsewhere:
 
 - your settings: on or off, Dim + reason or Hide, whether "Check every visible video" and AiSList are on, and whether you have seen the AiSList offer
 - your Hidden channels and Always shown channels lists: each channel's ID and/or @handle, and when you added it
@@ -22,7 +22,7 @@ This data never leaves your device. It is deleted when you uninstall the extensi
 
 ## Network requests
 
-The extension makes only the following requests.
+The extension makes these requests.
 
 1. **To `www.youtube.com`**: `POST /youtubei/v1/next`, the endpoint YouTube's web app uses for watch-page data, to read whether a video carries YouTube's "Made with AI" label:
    - one request for the video you open on a watch page, unless its result is already stored;
@@ -33,9 +33,9 @@ The extension makes only the following requests.
 
 2. **To `raw.githubusercontent.com`**, only if you turn on AiSList (off by default): a download of the public AiSList blocklist file when you turn it on, then at most once every 24 hours, and when you press "Refresh now". Nothing about you or your browsing is included in this request, and cookies are left out. The permission for this site is requested only when you turn the option on, and given back when you turn it off.
 
-As with any web request, YouTube and GitHub can see your IP address and browser user agent. Their own privacy policies apply to that.
+YouTube and GitHub can see your IP address and browser user agent, as with any web request. Their privacy policies apply.
 
-The extension does not use the YouTube Data API and does not send data to any other party.
+The extension does not use the YouTube Data API or send data to any other party.
 
 ## Permissions
 
@@ -43,4 +43,4 @@ The extension does not use the YouTube Data API and does not send data to any ot
 - Content script on `*://www.youtube.com/*`: to read video and channel links on YouTube pages, dim or hide cards, show the watch-page banner, and send the requests to YouTube described above.
 - Optional `https://raw.githubusercontent.com/*`: requested only when you turn on AiSList, used only to download that list, and removed when you turn AiSList off.
 
-Questions: open an issue at https://github.com/Nova-47/ai-label-filter-for-youtube/issues
+Questions: open an issue: https://github.com/Nova-47/ai-label-filter-for-youtube/issues
