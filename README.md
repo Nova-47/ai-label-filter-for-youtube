@@ -2,11 +2,11 @@
 
 # AI Label Filter for YouTube
 
-A Chrome extension that dims or hides videos YouTube labels as made with AI and shows why they were filtered. It does not guess, use a server, or require an account.
+A Chrome extension that dims or hides videos YouTube labels as made with AI and shows why. It uses YouTube's label. Its only inferred rule identifies channels where most recently checked videos have labels; the chip shows the count, and you can disable it. No server or account.
 
 [한국어](README.kr.md)
 
-Download the zip from [Releases](https://github.com/Nova-47/ai-label-filter-for-youtube/releases) and load it in Chrome ([steps](#install)). It is not in the Chrome Web Store. [Try it in 60 seconds](#try-it-in-60-seconds).
+Download the zip from [Releases](https://github.com/Nova-47/ai-label-filter-for-youtube/releases) and load it in Chrome ([steps](#install)). The Chrome Web Store listing is under review. [Try it in 60 seconds](#try-it-in-60-seconds).
 
 ![Demo: a dimmed video is shown again with one click](docs/demo.gif)
 
@@ -186,7 +186,7 @@ There are no dependencies, build steps, or minified code. The release zip contai
 
 ## Known limitations
 
-- **Label coverage is partial.** Most AI videos carry no YouTube label, and this extension does not guess.
+- **Label coverage is partial.** Most AI videos carry no YouTube label, and this extension does not infer labels from titles, thumbnails, or audio.
 - **Shorts and live pages are not checked.** On `/shorts/…` and `/live/…` pages no request is sent and no banner appears. Shorts cards in feeds are filtered like other cards.
 - **Watch-page sidebar cards can't be matched to channel lists.** They have no channel link, so Hidden channels, Always shown channels, channel flags and AiSList don't apply there; only a known label does.
 - **Playlist and mix cards are judged by their first video.** A card's link points to one video, so a whole playlist card can be filtered because of that video.
@@ -201,7 +201,7 @@ There are no dependencies, build steps, or minified code. The release zip contai
 ## FAQ
 
 **Why not use machine learning or heuristics?**
-Guessing from titles, thumbnails or audio produces false positives, and then you can't tell why a video disappeared. This extension acts only on YouTube's label, your own channel lists, and (if you turn it on) a community list with its own review process. Every filtered card has a reason you can see and undo.
+Guessing from titles, thumbnails, or audio produces false positives, and then you can't tell why a video disappeared. This extension uses only YouTube's label, your own channel lists, and, if enabled, a community list with its own review process. The channel rule counts labels on that channel's recently checked videos and shows the count. Every filtered card has a reason you can see and undo.
 
 **Why does it need to talk to YouTube at all?**
 YouTube doesn't include the AI label in the data for home, search or sidebar cards, only in a video's watch-page data. The request is sent from the YouTube page, because YouTube rejects it from an extension's background service worker.
