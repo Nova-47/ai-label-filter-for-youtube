@@ -2,37 +2,44 @@
 
 # AI Label Filter for YouTube
 
-A Chrome extension that hides the YouTube videos YouTube itself labels as made with AI, and tells you why each one was hidden. No guessing, no server, no account.
+A Chrome extension that dims or hides the videos YouTube itself labels as made with AI, and shows why each one was filtered. No guessing, no server, no account.
 
 [한국어](README.kr.md)
 
-![Manifest V3](https://img.shields.io/badge/Manifest-V3-blue)
-![Version](https://img.shields.io/badge/version-1.0.0-orange) <!-- TODO verify: version in manifest.json -->
-![License: MIT](https://img.shields.io/badge/license-MIT-green)
+**Install:** download the zip from [Releases](https://github.com/Nova-47/ai-label-filter-for-youtube/releases) and load it in Chrome ([steps](#install)). Not in the Chrome Web Store yet. Then [try it in 60 seconds](#try-it-in-60-seconds).
 
-> **Read this first: it will not catch most AI videos.**
-> The extension relies on YouTube's own "Made with AI" label. Many AI-generated videos don't have that label. Creators add some labels themselves, and since May 2026 YouTube also adds some automatically, but plenty of AI videos still have none. So the filter is precise (it never guesses from titles, thumbnails or a model) but it is not complete.
-> To catch more, you can turn on [AiSList](https://github.com/Override92/AiSList), a community-maintained list of AI channels with its own review and removal process. It is off by default.
-
-<!-- TODO screenshots (do not ship until real captures exist):
+<!-- Screenshots, added once real captures exist:
+![Demo](docs/demo.gif)
 ![Home feed with labelled videos dimmed, each showing why](docs/feed-dim.png)
 ![Banner on a labelled video's watch page](docs/watch-banner.png)
-![Popup: counts per reason, lists, settings](docs/popup.png)
-![Demo](docs/demo.gif)
+![Popup](docs/popup.png)
 -->
+
+> **It only catches what YouTube labels, and most AI videos are not labelled.**
+> That is the trade: it never guesses, so it is precise but not complete.
+> For more coverage, turn on the community list AiSList or "Check every visible video" (both off by default).
+
+- **Only YouTube's own label.** A video counts as AI only if YouTube shows its AI badge under the title. No model, no title or thumbnail heuristics.
+- **Every filtered card says why.** By default a filtered card is dimmed, with a chip that names the reason and offers **Show** and **Allow channel**. If you would rather not see them at all, choose **Hide** in the popup.
+- **Small and auditable.** No server, no dependencies, no build step. One required permission (`storage`) plus a content script on www.youtube.com. Every network request is made in one of two functions, listed [below](#how-to-audit-it).
 
 ---
 
-## Features
+## Install
 
-- **Uses YouTube's own label**: a video counts as AI only if YouTube shows its AI badge under the title
-- **Watch page banner**: when the video you open is labelled, a banner offers **Hide this channel** or **Dismiss**
-- **Feed filtering**: hides cards from home, search and the sidebar for known labelled videos, channels you blocked, channels flagged automatically, and (if you turn it on) channels listed in AiSList <!-- TODO verify: exact list of surfaces (subscriptions, channel pages, Shorts shelves) -->
-- **Hide or dim**: hide cards (default), or dim them with a chip saying why
-- **Show anyway**: reveal any single card with one click <!-- TODO verify: how "show anyway" is reached in hide mode -->
-- **Allowlist**: channels you trust are never hidden, whatever the reason
-- **Popup**: global on/off, counts per reason, your block list and allowlist
-- **Fails open**: if anything goes wrong, videos are shown, not hidden
+1. Download `ai-label-filter-for-youtube-<version>.zip` from [Releases](https://github.com/Nova-47/ai-label-filter-for-youtube/releases) and unzip it into a folder. (Or clone the repository: it loads as is, there is nothing to build.)
+2. Open `chrome://extensions` and turn on **Developer mode** (top right).
+3. Click **Load unpacked** and select the folder.
+
+Requires Chrome 110 or later.
+
+## Try it in 60 seconds
+
+Out of the box, feeds change only for videos the extension already knows about, so a fresh install shows nothing at first. To see it work:
+
+1. Open [this video](https://www.youtube.com/watch?v=yHG-pivADos), which YouTube labels as made with AI. After a few seconds a banner appears in the bottom-left corner: "YouTube labels this video as made with AI", with **Hide this channel** and **Dismiss**.
+2. Go to the channel's page (@eigi_and_ai) or search for the video. Wherever its card appears, it is now dimmed with the chip "YouTube AI label", because the result is saved on your device.
+3. To filter feeds more widely, open the popup and turn on **Hide channels listed in AiSList** (a community list of about 29,000 channels; Chrome asks for permission to download it) or **Check every visible video** (asks YouTube about each video on screen, one request at a time).
 
 ---
 
@@ -40,60 +47,105 @@ A Chrome extension that hides the YouTube videos YouTube itself labels as made w
 
 ### The signal
 
-YouTube shows a small "AI" badge under the title of videos it labels as made with AI. That badge is in the data YouTube's web app loads for a watch page, but not in the data for home, search or sidebar cards. So the only way to know whether a video in your feed is labelled is to ask YouTube about that video.
+YouTube shows an "AI" badge under the title of videos it labels as made with AI. The badge is in the data YouTube's web app loads for a watch page, but not in the data for home, search or sidebar cards. So to know whether a video is labelled, the extension asks YouTube about that video with one small request to `/youtubei/v1/next`, the endpoint the web app itself uses to load a watch page.
 
-The extension does this with one small request per video to `/youtubei/v1/next`, the endpoint the YouTube web app itself uses to load a watch page. The request:
-
-- is sent from the YouTube page itself (from `www.youtube.com`), not from a background service
-- omits your cookies, so it is not tied to your YouTube or Google account
-- asks for just a few fields (the badges under the title and the video's channel), so the reply is about 1 KB instead of several hundred KB
-
-A video counts as AI **only** if the reply contains YouTube's AI badge (internally a `metadataBadgeRenderer` with style `BADGE_STYLE_TYPE_SIMPLE` and icon `INFO`). The "How this was made" panel on its own does **not** count, because YouTube also shows it for auto-dubbed videos and for footage marked "captured with a camera".
+A video counts as AI **only** if the reply contains that badge: a `metadataBadgeRenderer` with style `BADGE_STYLE_TYPE_SIMPLE` and icon `INFO`. Auto-dubbed videos get a badge with the same style but a different icon, and do not count. The icon is checked, not the badge text, so YouTube's interface language does not matter.
 
 ### Where it checks
 
 | Where | Requests | What happens |
 |---|---|---|
-| Watch page | 1, for the video you opened | If the video is labelled, a banner offers **Hide this channel** / **Dismiss**. The result is cached. |
-| Feeds (default) | none | Cards are hidden only from what is already known on your device (see below). |
-| Feeds with **Check videos in feeds** on (off by default) | 1 per visible video that has no cached result, one at a time, at least 1 s apart | Labelled videos are hidden as they are found. |
+| Watch page (`/watch?v=…`) | 1 for the video you opened, unless its result is already saved | If the video is labelled, a banner offers **Hide this channel** and **Dismiss**. |
+| Feeds (default) | none | Cards are filtered only from what is already on your device: saved results, your channel lists, channels with 2+ labelled videos, and AiSList if it is on. |
+| Feeds with **Check every visible video** on | 1 per card on screen that has no saved result | Labelled videos are filtered as they are found. |
 
-### Why a card gets hidden
+Cards are recognised on home, subscriptions, search, channel pages, playlists, the watch-page sidebar and Shorts shelves.
+
+### Why a card is filtered
 
 In this order:
 
-1. **Allowlist**: if the channel is on your allowlist, the card is always shown.
-2. **Blocked channel**: you blocked the channel (from the banner or the popup).
-3. **Made with AI label**: the video itself was found to be labelled.
-4. **Auto-flagged channel**: the extension has seen 2 or more labelled videos from this channel on your device.
-5. **Listed in AiSList**: only if you turned AiSList on.
+1. **Always shown channels**: a channel on this list is never filtered.
+2. **Hidden channels**: you added the channel with **Hide this channel**. Chip: "Your blocklist".
+3. **YouTube AI label**: the video itself is labelled. Chip: "YouTube AI label".
+4. **Channel with 2+ labelled videos**: the extension has seen at least two different labelled videos from this channel on your device. Chip: "Channel: N labelled videos". These cards are always dimmed with their reason, never hidden, even in Hide mode, because this is an inference rather than a label on the video.
+5. **Listed in AiSList**: only if you turned AiSList on. Chip: "Listed in AiSList".
 
-Otherwise the card is shown.
+Otherwise the card is shown. Rules 1, 2, 4 and 5 need a channel link on the card (a `/@handle` or `/channel/UC…` link).
 
-Results are cached on your device: 30 days for a video with no label (YouTube may add a label later), 180 days for a labelled one.
+Results are saved for 30 days for a video without the label (YouTube may add one later) and 180 days for a labelled one.
 
-### When something goes wrong
+### What you see
 
-- **Any error** (network failure, unexpected reply, removed video): the video is shown and nothing is cached.
-- **YouTube pushes back** (HTTP 403 or 429, or its "unusual traffic" / "Sorry" page): all requests stop for 24 hours.
-- **Daily self-check**: once a day the extension checks a few videos known to carry the label. If it no longer finds the label (for example because YouTube changed its data format), the popup warns that detection may be broken. <!-- TODO verify: self-check runs when the extension is globally off / while paused? -->
+- **Dim + reason** (default): the card is faded and a chip shows the reason, with **Show** (shows that video normally in this tab until you reload) and **Allow channel** (adds the channel to Always shown channels; only offered when the card has a channel link).
+- **Hide**: filtered cards are removed from view, except channels with 2+ labelled videos, which stay dimmed. To see what was hidden, open the popup and press **Reveal** under "This page": that tab switches to the dimmed view, with the same chips, until you press **Hide again** or reload.
+- **Watch page banner**: shown when the open video is labelled, in either mode. **Hide this channel** adds the channel to Hidden channels (the button is left out if the channel is unknown or already on that list). No banner appears for a channel on Always shown channels. The video itself is never hidden.
+
+If anything fails (network error, timeout, unexpected reply, removed video), the video is shown and nothing is saved.
+
+---
+
+## Requests to YouTube
+
+The watch page, card checks and the daily self-check all send the same request, from the youtube.com page itself (the content script):
+
+- `POST https://www.youtube.com/youtubei/v1/next?prettyPrint=false&fields=<mask>`
+- Body: `{"context":{"client":{"clientName":"WEB","clientVersion":"…","hl":"en","gl":"US"}},"videoId":"…"}`. Only the video ID changes. The client version is read from the YouTube page; until it is found there, a fixed recent version is sent.
+- Your cookies are left out (`credentials: 'omit'`), so the request is not tied to your YouTube or Google account, and YouTube answers as it would a logged-out visitor.
+- The field mask asks for two things only: the badges under the title, and the channel's ID and @handle. The reply is about 0.4 KB instead of about 400 KB.
+- **One at a time, browser-wide.** All youtube.com tabs share one lock, and each request starts at least 1 second after the previous reply. Card checks add a random 0–1 s on top.
+- Each request times out after 10 seconds.
+- There is no retry without the mask.
+
+When YouTube does not answer normally, requests stop for a while in every tab:
+
+| Reply | What happens |
+|---|---|
+| HTTP 403 or 429, any redirect, or an HTML "unusual traffic" / CAPTCHA / "Sorry" page | All requests to YouTube stop for 24 hours. The popup says "YouTube pushed back (…), so all requests are paused until …". |
+| HTTP 400, 404 or 5xx, or a reply that is not JSON | All requests to YouTube pause for 15 minutes. If it keeps happening, the pause doubles each time (30 min, 1 h, …) up to 24 hours. One good reply ends it. The popup says "YouTube refused a request (…), so requests are paused until …". |
+
+While requests are paused, cards are still filtered from what is already saved.
+
+With default settings the extension sends one request per watch page whose result is not saved yet, plus the self-check's one or two requests a day.
+
+### Daily self-check
+
+Once every 24 hours per browser (not per tab), when a YouTube page loads or you navigate, the extension asks about two videos that carried the label on 2026-10-13: `yHG-pivADos` (@eigi_and_ai) and, only if the first does not show the label, `Xpg-JIuJ_cU` (@foreverharmony_official). It runs even when "Check every visible video" is off, so it normally sends one or two requests a day. It does not run while filtering is off or requests are paused; if requests are paused before it has sent anything, it runs once they are allowed again. Its results are not saved and do not count towards channel flags.
+
+| Result | Popup |
+|---|---|
+| A canary shows the label | nothing |
+| The label can't be read: both canaries are there and neither is labelled, a canary's channel can be read but its label can't, or neither canary can be read at all (what a changed YouTube reply looks like) | "Label detection may be broken (YouTube may have changed something)." |
+| YouTube refuses the check (HTTP 400, 404, 5xx or not JSON) | "YouTube refused the daily label check, so labels may not be read right now." The warning goes away on the next good reply from YouTube. |
+| One canary is gone (removed or private) and the other is not labelled | nothing |
+| Offline, or requests are blocked | nothing (a block shows its own message) |
 
 ---
 
 ## Privacy
 
-There is no server. Nothing is ever sent to the developer. Here is every request the extension makes:
+There is no server. Nothing is sent to the developer. These are all the requests the extension makes:
 
 | When | Request | Sent to | Contains | Your cookies |
 |---|---|---|---|---|
-| You open a watch page | 1 × `POST /youtubei/v1/next` (field-masked) | `www.youtube.com` | that video's ID and the standard YouTube web client fields <!-- TODO verify: exact request body (client name/version, hl/gl?) --> | not sent |
-| **Check videos in feeds** is on | the same, per visible video with no cached result, at most 1 per second | `www.youtube.com` | that video's ID | not sent |
-| Once a day (self-check) | the same, for a few reference videos | `www.youtube.com` | the reference videos' IDs | not sent |
-| AiSList is on, at most once per 24 h | `GET` of the [AiSList blocklist file](https://github.com/Override92/AiSList) | `raw.githubusercontent.com` | an ordinary file download, nothing about you | not applicable |
+| You open a watch page whose result is not saved | 1 × `POST /youtubei/v1/next` (field-masked) | `www.youtube.com` | the video ID and the client fields above | not sent |
+| **Check every visible video** is on | the same, per card on screen with no saved result | `www.youtube.com` | that video's ID | not sent |
+| Once a day (self-check) | the same, for one or two fixed videos | `www.youtube.com` | those videos' IDs | not sent |
+| AiSList is on: at most once per 24 h, and when you turn it on or press **Refresh now** | `GET` of the [AiSList blocklist file](https://github.com/Override92/AiSList) | `raw.githubusercontent.com` | an ordinary file download; the daily check sends the ETag of the copy it has, so an unchanged list is not downloaded again | not sent |
 
-As with any web request, YouTube and GitHub see your IP address and browser user agent. YouTube already knows which videos it shows you; these requests only ask it about those same videos.
+As with any web request, YouTube and GitHub see your IP address and browser user agent.
 
-Stored locally in `chrome.storage` and nowhere else: your settings, block list and allowlist, the per-video results cache, per-channel counts of labelled videos, the downloaded AiSList copy, and the hidden-card counts shown in the popup. <!-- TODO verify: storage.local only, or settings in storage.sync? --> Uninstalling the extension deletes all of it.
+Everything is stored in `chrome.storage.local` on your device and nowhere else (nothing in `chrome.storage.sync`):
+
+- your settings
+- Hidden channels and Always shown channels (channel ID and/or @handle, and when it was added)
+- results per video: video ID, labelled or not, the day it was checked and the day its card was last seen; for labelled videos also the channel ID and @handle. At most 20,000 videos.
+- per channel seen in a reply: its ID, its @handle, the IDs of up to 5 of its labelled videos, and the day of its last result. At most 5,000 channels; past that, channels with fewer labelled videos and not seen for longer are dropped first, and channels with 2+ labelled videos or on your lists are always kept.
+- if AiSList is on: the downloaded list and its download details (entry count, ETag, times, last error)
+- whether requests are paused, until when and why
+- when the self-check last ran and its result
+
+The number of filtered cards is not stored: the popup asks the open YouTube tab each time. Uninstalling the extension deletes all of it.
 
 No analytics, no telemetry, no YouTube Data API, no account. Full policy: [PRIVACY.md](PRIVACY.md).
 
@@ -103,100 +155,80 @@ No analytics, no telemetry, no YouTube Data API, no account. Full policy: [PRIVA
 
 | Permission | Why it is needed |
 |---|---|
-| `storage` | Saves your settings, block list, allowlist, the results cache and the AiSList copy on your device. |
-| Content script on `*://www.youtube.com/*` | Reads video and channel links on YouTube pages, hides or dims cards, shows the watch-page banner, and sends the label request from the YouTube page itself. Because the request comes from `www.youtube.com`, no extra host permission is needed. |
-| Optional: `https://raw.githubusercontent.com/*` | Requested only at the moment you turn on AiSList, and used only to download that list. If you never turn it on, the extension never asks for it. <!-- TODO verify: is the permission removed again when AiSList is turned off? --> |
+| `storage` | Keeps the data listed above on your device. |
+| Content script on `*://www.youtube.com/*` | Reads video and channel links on YouTube pages, dims or hides cards, shows the watch-page banner, and sends the label request from the YouTube page itself. Because the request comes from `www.youtube.com`, no host permission is needed. |
+| Optional: `https://raw.githubusercontent.com/*` | Asked for only when you turn AiSList on, and used only to download that list. Turning AiSList off gives the permission back. If you remove it in `chrome://extensions`, AiSList is turned off and its copy deleted. |
 
-It does not ask for `tabs`, `history`, "read and change all your data on all websites", or anything else.
-
----
-
-## Installation
-
-> The extension is not on the Chrome Web Store yet. <!-- TODO: Chrome Web Store link once published --> Load it manually in developer mode:
-
-1. Download or clone this repository
-   ```
-   git clone https://github.com/Nova-47/ai-label-filter-for-youtube.git
-   ```
-   <!-- TODO verify: final repository URL -->
-
-2. Open Chrome and go to `chrome://extensions`
-
-3. Enable **Developer mode** (toggle in the top-right corner)
-
-4. Click **Load unpacked** and select the `ai-label-filter-for-youtube` folder
-
-5. Open YouTube. Click the extension icon to see the settings and counts.
+It does not ask for `tabs`, `history`, "read and change all your data on all websites", or anything else. The popup gets the page counts by asking the YouTube tab's content script, so it does not need `tabs`.
 
 ---
 
 ## Settings (popup)
 
-<!-- TODO verify: setting names and wording against popup.html -->
-
 | Setting | Default | What it does |
 |---|---|---|
-| On/off | On | Turns all filtering and requests on or off. |
-| Hide / Dim | Hide | Hide removes the card; Dim fades it and shows why it was filtered. |
-| Check videos in feeds | Off | Asks YouTube about visible feed videos that have no cached result (1 at a time, at least 1 s apart). |
-| AiSList subscription | Off | Hides channels listed in AiSList. Downloads the list from GitHub at most once per 24 h. |
-| Block list / Allowlist | empty | Channels you always hide / never hide. |
+| Switch in the header ("Turn filtering on or off") | On | Turns filtering, the banner and all requests to YouTube on or off. |
+| Filtered videos: **Dim + reason** / **Hide** | Dim + reason | Dim fades the card and shows why; Hide removes it from view (see [What you see](#what-you-see)). |
+| **Check every visible video** | Off | Asks YouTube about cards on screen that have no saved result: newest first, only while the tab is in front, each video once per tab. Cards scrolled away before their turn are skipped. |
+| **Hide channels listed in AiSList** | Off | Filters channels on [AiSList](https://github.com/Override92/AiSList). Downloads the list at most once per 24 hours; **Refresh now** downloads it again. On first use the popup offers it in a "Community list (optional)" card with **Turn on** and **Not now**. |
+| **Hidden channels** | empty | Channels added with **Hide this channel**. **Remove** takes one off. |
+| **Always shown channels** | empty | Channels added with **Allow channel**. **Remove** takes one off. |
 
-The popup also shows how many cards were hidden for each reason, and a warning if requests are paused or the daily self-check failed.
+Adding a channel to one list takes it off the other. **Remove** removes the channel whether it was added by @handle or by channel ID.
+
+The popup also shows how many cards were filtered on the open YouTube page for each reason, how many channels are dimmed for having 2+ labelled videos, and a warning when requests are paused or the self-check found a problem.
+
+---
+
+## How to audit it
+
+- No dependencies, no build step, no minified code. The release zip contains the repository's extension files byte for byte; `scripts/package.sh` only picks the files and zips them.
+- Every network request is made in one of two places: `request()` in `content.js` (YouTube) and `doRefresh()` in `background.js` (AiSList, only if you turn it on).
+- The decision rules, reply parsing, pauses and self-check verdicts are plain functions in `shared.js`, tested with `node --test` without a browser.
+
+## Known limitations
+
+- **Label coverage is partial.** Most AI videos carry no YouTube label, and this extension does not guess.
+- **Shorts and live pages are not checked.** On `/shorts/…` and `/live/…` pages no request is sent and no banner appears. Shorts cards in feeds are filtered like other cards.
+- **Watch-page sidebar cards can't be matched to channel lists.** They have no channel link, so Hidden channels, Always shown channels, channel flags and AiSList don't apply there; only a known label does.
+- **Playlist and mix cards are judged by their first video.** A card's link points to one video, so a whole playlist card can be filtered because of that video.
+- **Incognito may have separate request limits.** If you allow the extension in incognito, incognito windows may use their own request queue, so their requests may not be spaced against those from normal windows.
+- **The EU consent page is untested.** If YouTube answers a request with a redirect to it, requests pause for 24 hours like any redirect; if it answers with some other HTML page, they back off, starting at 15 minutes.
+- **Channels can only be added to Hidden channels from the banner** of a labelled video. There is no way to type a channel in.
+- **Only `www.youtube.com`.** `m.youtube.com` is not supported.
+- **The endpoint is YouTube's internal one**, not a documented API. It can change or stop working at any time; then labelled videos are shown, not hidden.
 
 ---
 
 ## FAQ
 
-**Why not use machine learning or heuristics to detect AI videos?**
-Guessing from titles, thumbnails or audio produces false positives, and then you can't tell why a video disappeared. This extension only acts on signals someone accountable made: YouTube's label, your own block list, and (if you opt in) a human-reviewed community list. Every hidden card has a reason you can see and undo.
+**Why not use machine learning or heuristics?**
+Guessing from titles, thumbnails or audio produces false positives, and then you can't tell why a video disappeared. This extension acts only on YouTube's label, your own channel lists, and (if you turn it on) a community list with its own review process. Every filtered card has a reason you can see and undo.
 
 **Why does it need to talk to YouTube at all?**
-YouTube doesn't include the AI label in the data for home, search or sidebar cards; it is only in the data for a video's watch page. To know whether a video is labelled, the extension has to ask YouTube about that video. It asks YouTube directly from the YouTube page, without your cookies, and asks for only the few fields it needs. (YouTube rejects these requests when they come from an extension's background service worker, which is another reason they come from the page.)
-
-**Does it slow YouTube down?**
-By default it makes one extra request per watch page, with a reply of about 1 KB. Feed filtering by default is a local lookup with no network requests. With **Check videos in feeds** on, requests go out one at a time, at least 1 s apart, only for visible cards, and each result is cached (30 / 180 days).
+YouTube doesn't include the AI label in the data for home, search or sidebar cards, only in a video's watch-page data. The request is sent from the YouTube page, because YouTube rejects it from an extension's background service worker.
 
 **Can YouTube rate-limit or block me?**
-The endpoint is YouTube's internal API, not a documented public one, so there are no guarantees: YouTube can limit or change it at any time. The extension keeps the rate low (see above), omits your cookies so requests are not tied to your account, and stops all requests for 24 hours if YouTube answers with 403, 429 or its "Sorry" page. The requests still come from your IP address. If you want no extra requests in feeds, leave **Check videos in feeds** off (the default).
+There are no guarantees with an internal endpoint, and the requests come from your IP address. The extension keeps the rate low (see [Requests to YouTube](#requests-to-youtube)), leaves out your cookies, and stops when YouTube pushes back. If you want no requests from feeds, leave **Check every visible video** off (the default).
 
-**A video that is obviously AI is still showing. Why?**
-Most likely it has no YouTube label. See the limitation at the top. You can block the channel from the popup, or turn on AiSList for broader coverage.
+**A video that is obviously AI is still showing.**
+Most likely it has no YouTube label. Turn on **Hide channels listed in AiSList** for broader coverage.
 
-**AiSList hid a channel that isn't AI.**
-Add the channel to your allowlist; it will never be hidden again. To get the entry fixed for everyone, use [AiSList's own removal process](https://github.com/Override92/AiSList). This extension doesn't edit the list.
-
-**Does it skip Shorts?**
-No. There is no Shorts auto-skip in v1. <!-- TODO verify: whether Shorts cards in feeds are filtered like other cards -->
-
-**What if YouTube changes its data format?**
-Then labelled videos stop being detected and are shown (the extension fails open). The daily self-check notices this and warns you in the popup.
+**AiSList filtered a channel that isn't AI.**
+Use **Allow channel** on its card; the channel will not be filtered again. To get the entry fixed for everyone, use [AiSList's own removal process](https://github.com/Override92/AiSList). This extension does not edit the list.
 
 ---
 
 ## Development
 
-<!-- TODO verify: test command and file layout from the code agent's notes -->
-
-- Unit tests: `node --test`
-- Build the Chrome Web Store zip: `scripts/package.sh` (writes `dist/ai-label-filter-for-youtube-<version>.zip`)
-
----
-
-## Changelog
-
-### v1.0.0
-- Initial release
-
----
+- Tests: `node --test` (no dependencies). `tests/harness.js` runs `content.js` against a fake browser with a virtual clock.
+- Zip for release: `scripts/package.sh` writes `dist/ai-label-filter-for-youtube-<version>.zip`.
+- Debug log: set `DEBUG = true` at the top of `content.js`; messages start with `[AI Label Filter]`.
 
 ## Credits
 
-- The technique of reading YouTube's AI label with one field-masked `/youtubei/v1/next` request per video is adapted from [Weedout for YouTube](https://github.com/masteranza/weedout-for-youtube) by masteranza (MIT). <!-- TODO verify: if any Weedout code was copied, include its MIT copyright notice -->
-- [AiSList](https://github.com/Override92/AiSList) by Override92 is licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/). It is not bundled with this extension; your browser downloads it from its source only if you turn the subscription on. This extension is free and non-commercial, and is not affiliated with AiSList.
-
----
+- Reading YouTube's AI label with one field-masked `/youtubei/v1/next` request per video comes from [Weedout for YouTube](https://github.com/masteranza/weedout-for-youtube) (MIT). The card container list and the client version lookup in `content.js` are adapted from it; its MIT notice is in the header of `content.js`.
+- [AiSList](https://github.com/Override92/AiSList) by Override92 is licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/). It is not bundled with this extension; your browser downloads it from its source only if you turn it on. This extension is free and non-commercial, and is not affiliated with AiSList.
 
 ## Contributing
 
