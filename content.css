@@ -1,0 +1,85 @@
+/* Everything is scoped under html.ailf-on (extension enabled), so switching it
+   off, or the extension going away, is one class. Cards are only ever marked
+   with data attributes and hidden with CSS; no YouTube node is removed. */
+
+/* Hide mode */
+html.ailf-on:not(.ailf-dim) [data-ailf] {
+  display: none !important;
+}
+
+/* Dim mode (also the popup's "reveal" view): faded card + reason chip */
+html.ailf-on.ailf-dim [data-ailf] {
+  position: relative !important;
+}
+
+html.ailf-on.ailf-dim [data-ailf] > :not(.ailf-chip) {
+  opacity: 0.25;
+  filter: grayscale(1);
+  transition: opacity 0.15s;
+}
+
+html.ailf-on.ailf-dim [data-ailf]:hover > :not(.ailf-chip) {
+  opacity: 0.75;
+}
+
+.ailf-chip {
+  display: none !important;
+}
+
+html.ailf-on.ailf-dim .ailf-chip {
+  display: flex !important;
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 10;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 12px);
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(15, 15, 15, 0.9);
+  color: #f1f1f1;
+  font: 500 12px/1.3 Roboto, Arial, sans-serif;
+}
+
+.ailf-chip button,
+#ailf-banner button {
+  all: unset;
+  cursor: pointer;
+  color: #3ea6ff;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ailf-chip button[hidden],
+#ailf-banner button[hidden] {
+  display: none;
+}
+
+.ailf-chip button:focus-visible,
+#ailf-banner button:focus-visible {
+  outline: 2px solid #3ea6ff;
+  outline-offset: 2px;
+}
+
+/* Watch-page notice: fixed in a corner so it never depends on YouTube's layout */
+#ailf-banner {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 2200;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #212121;
+  color: #f1f1f1;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  font: 400 13px/1.4 Roboto, Arial, sans-serif;
+}
+
+#ailf-banner button[data-act="dismiss"] {
+  color: #aaa;
+}
