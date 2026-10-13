@@ -2,23 +2,29 @@
    off, or the extension going away, is one class. Cards are only ever marked
    with data attributes and hidden with CSS; no YouTube node is removed. */
 
-/* Hide mode */
-html.ailf-on:not(.ailf-dim) [data-ailf] {
+/* Hide mode. Auto-flagged channels ("channel") are never hidden outright:
+   they are always dimmed with their chip, so the reason and "Allow channel"
+   stay in view. */
+html.ailf-on:not(.ailf-dim) [data-ailf]:not([data-ailf="channel"]) {
   display: none !important;
 }
 
-/* Dim mode (also the popup's "reveal" view): faded card + reason chip */
-html.ailf-on.ailf-dim [data-ailf] {
+/* Dim mode (also the popup's "reveal" view) and auto-flagged channels:
+   faded card + reason chip */
+html.ailf-on.ailf-dim [data-ailf],
+html.ailf-on [data-ailf="channel"] {
   position: relative !important;
 }
 
-html.ailf-on.ailf-dim [data-ailf] > :not(.ailf-chip) {
+html.ailf-on.ailf-dim [data-ailf] > :not(.ailf-chip),
+html.ailf-on [data-ailf="channel"] > :not(.ailf-chip) {
   opacity: 0.25;
   filter: grayscale(1);
   transition: opacity 0.15s;
 }
 
-html.ailf-on.ailf-dim [data-ailf]:hover > :not(.ailf-chip) {
+html.ailf-on.ailf-dim [data-ailf]:hover > :not(.ailf-chip),
+html.ailf-on [data-ailf="channel"]:hover > :not(.ailf-chip) {
   opacity: 0.75;
 }
 
@@ -26,7 +32,8 @@ html.ailf-on.ailf-dim [data-ailf]:hover > :not(.ailf-chip) {
   display: none !important;
 }
 
-html.ailf-on.ailf-dim .ailf-chip {
+html.ailf-on.ailf-dim .ailf-chip,
+html.ailf-on [data-ailf="channel"] > .ailf-chip {
   display: flex !important;
   position: absolute;
   top: 6px;

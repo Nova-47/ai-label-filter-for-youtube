@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "AI Label Filter for YouTube",
   "version": "1.0.0",
-  "description": "Hide YouTube videos that YouTube itself labels as made with AI, plus channels you block. No server, no tracking.",
+  "description": "Hide videos YouTube labels as made with AI and channels you block; dim channels with 2+ labelled videos. No server, no tracking.",
   "minimum_chrome_version": "110",
   "permissions": ["storage"],
   "optional_host_permissions": ["https://raw.githubusercontent.com/*"],

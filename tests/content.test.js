@@ -202,3 +202,25 @@ test('saving: seen-day updates alone write nothing; only changed keys are writte
   await b.run(10000);
   assert.deepEqual(b.writes, ['verdicts', 'channels,verdicts']);
 });
+
+// Review M7: in hide mode an auto-flagged channel's unlabelled videos used to
+// vanish with no reason shown. Now that reason is always dimmed with its chip.
+test('auto-flagged channel: marked "channel" with chip, and the CSS never hides it', async () => {
+  const b = browser();
+  const U = 'UCMMmm45yro8eyHzadofoG4A';
+  Object.assign(b.store, { selfcheck: { at: b.now() }, channels: { [U]: { h: 'foreverharmony_official', ai: ['v1', 'v2'] } } });
+  const t = b.tab('https://www.youtube.com/');
+  const flagged = t.addCard('aaaaaaaaaaa', '/@ForeverHarmony_Official');
+  const plain = t.addCard('bbbbbbbbbbb', '/@someoneelse');
+  await b.run(1000);
+  assert.equal(flagged.dataset.ailf, 'channel');
+  assert.equal(flagged.children[0].className, 'ailf-chip');
+  assert.equal(flagged.children[0].firstChild.textContent, 'Channel: 2 labelled videos');
+  assert.equal(flagged.children[0].lastChild.hidden, false);       // "Allow channel"
+  assert.equal('ailf' in plain.dataset, false);
+  const css = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'content.css'), 'utf8');
+  const hide = css.match(/([^{}]*)\{\s*display:\s*none !important;/g).filter((r) => r.includes('[data-ailf]'));
+  assert.equal(hide.length, 1);
+  assert.match(hide[0], /\[data-ailf\]:not\(\[data-ailf="channel"\]\)/);
+  assert.match(css, /html\.ailf-on \[data-ailf="channel"\] > \.ailf-chip/);
+});

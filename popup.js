@@ -45,7 +45,9 @@ function renderPage(res) {
   const parts = Object.keys(REASONS).filter((r) => res.counts[r]).map((r) => `${REASONS[r]}: ${res.counts[r]}`);
   $('counts').textContent = !settings.enabled ? 'Filtering is off.'
     : parts.length ? parts.join(' · ') : 'Nothing filtered on this page.';
-  $('peek-row').hidden = !settings.enabled || settings.mode !== 'hide' || !parts.length;
+  // Auto-flagged channels are dimmed, never hidden: nothing to reveal for those.
+  $('peek-row').hidden = !settings.enabled || settings.mode !== 'hide' ||
+    !Object.keys(REASONS).some((r) => r !== 'channel' && res.counts[r]);
   $('peek').textContent = peek ? 'Hide again' : 'Reveal';
 }
 
@@ -110,7 +112,7 @@ async function render() {
   renderChannels('allowed', got.allowed);
   const flagged = Object.values(got.channels || {}).filter(A.isAutoFlagged).length;
   $('flagged').textContent = flagged
-    ? `${flagged} channel${flagged > 1 ? 's' : ''} auto-hidden for having 2+ AI-labelled videos.` : '';
+    ? `${flagged} channel${flagged > 1 ? 's' : ''} dimmed for having 2+ AI-labelled videos.` : '';
 
   renderPage(await ask({ action: 'status' }));
 }
