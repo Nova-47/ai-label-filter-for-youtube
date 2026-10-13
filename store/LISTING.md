@@ -85,7 +85,7 @@ YouTube 라벨은 AI 생성 콘텐츠의 일부에만 붙고, 라벨이 없는 A
 이 확장 프로그램은 YouTube 또는 Google LLC와 제휴, 보증, 후원 관계가 없습니다. YouTube는 Google LLC의 상표입니다.
 ```
 
-**Graphic assets** (not made yet; use real captures only, never a mock-up that looks like an official YouTube product)
+**Graphic assets** (screenshots are built from the real captures in `docs/`, never a mock-up that looks like an official YouTube product)
 - Store icon 128×128: `icons/icon128.png`
 - Screenshots 1280×800: `store/screenshot-1.png` (feed with dimmed cards and reason chips), `store/screenshot-2.png` (watch-page banner), `store/screenshot-3.png` (popup)
 - Small promo tile 440×280: `store/promo-small.png`
