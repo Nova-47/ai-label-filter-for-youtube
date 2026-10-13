@@ -235,6 +235,7 @@
   }
 
   // ── Self-check ─────────────────────────────────────────────────────────────
+  // Due once a day (by the last run's start), never while requests are paused.
   const selfcheckDue = (sc, b, now = Date.now()) =>
     !breakerOpen(b, now) && !(sc && typeof sc.at === 'number' && now >= sc.at && now - sc.at < DAY);
 
@@ -279,7 +280,7 @@
   // Why a card should be hidden, or null to show it. Order matters: the
   // allowlist always wins; the user's own blocklist comes before automatic
   // reasons. `ch` is { ucid?, handle? } (either may be missing), `idx` the
-  // lookup sets built by the content script.
+  // lookup sets from buildIndex().
   function decide(videoAi, ch, idx) {
     const keys = channelKeys(ch, idx);
     if (keys.some((k) => idx.allow.has(k))) return null;
@@ -348,13 +349,12 @@
   }
 
   const api = {
-    NEXT_FIELDS, CANARY_IDS, TTL_CLEAN_DAYS, TTL_AI_DAYS, CACHE_MAX, CHANNELS_MAX, BREAKER_MS, RETRY_MS, REQUEST_GAP_MS,
-    AUTOFLAG_MIN_AI, AISLIST_URL, DAY, QUEUE_MAX,
+    NEXT_FIELDS, CANARY_IDS, TTL_CLEAN_DAYS, TTL_AI_DAYS, CACHE_MAX, CHANNELS_MAX, BREAKER_MS, RETRY_MS,
+    REQUEST_GAP_MS, AUTOFLAG_MIN_AI, AISLIST_URL, DAY, QUEUE_MAX,
     isAiBadge, parseNext, isUcid, normalizeHandle, channelFromHref, videoIdFromHref,
     parseList, today, cacheGet, cachePut, cacheOwner, cachePrune, recordVerdict, mergeChannel, isAutoFlagged,
-    channelsPrune, mergeDirty, mergeVerdict,
-    isBlockedResponse, breakerOpen, breakerTrip, backoff, readResponse, selfcheckDue, selfcheckVerdict, enqueue, takeNext, decide, channelKeys,
-    buildIndex, listKeysFor, listPut, listDrop,
+    channelsPrune, mergeDirty, mergeVerdict, isBlockedResponse, breakerOpen, breakerTrip, backoff, readResponse,
+    selfcheckDue, selfcheckVerdict, enqueue, takeNext, decide, channelKeys, buildIndex, listKeysFor, listPut, listDrop,
   };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.AILF = api;
