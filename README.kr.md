@@ -67,7 +67,7 @@ YouTube는 AI로 제작됐다고 라벨을 붙인 영상의 제목 아래에 "AI
 1. **Always shown channels**(항상 보일 채널): 이 목록에 있는 채널은 거르지 않습니다.
 2. **Hidden channels**(숨긴 채널): **Hide this channel**로 추가한 채널입니다. 칩: "Your blocklist".
 3. **YouTube AI label**: 영상 자체에 라벨이 있습니다. 칩: "YouTube AI label".
-4. **확인한 영상 대부분에 라벨이 있는 채널**(선택, 기본 켜짐 — 팝업에서 끌 수 있음): 이 기기에서 이 채널의 서로 다른 영상을 마지막으로 확인한 20개 중 확인한 영상이 5개 이상이고 그중 60% 이상에 라벨이 있습니다. 같은 영상을 다시 확인하면 한 번만 세고 가장 최근 자리로 옮기며, 가장 최근 결과를 씁니다. 칩: "Channel: N of last M checked videos AI-labelled". M은 그 표본의 영상 수입니다(최대 20). 영상에 붙은 라벨이 아니라 추론이기 때문에 Hide 모드에서도 숨기지 않고 늘 이유와 함께 흐리게 표시합니다. 팝업 스위치 **Also dim channels whose recent videos are mostly AI-labelled**로 이 규칙을 끌 수 있습니다. 꺼도 확인한 영상은 계속 세므로, 다시 켜면 바로 적용됩니다. 팝업에는 지금 이 규칙으로 흐리게 표시 중인 채널이 "N of last M"과 함께 나오고, **Allow** 버튼을 누르면 그 채널이 Always shown channels에 들어가 이 규칙보다 늘 우선합니다.
+4. **확인한 영상 대부분에 라벨이 있는 채널**(기본 켜짐, 팝업에서 끌 수 있음): 이 기기에서 마지막으로 확인한 이 채널의 서로 다른 영상 20개 중 5개 이상을 확인했고, 그중 60% 이상에 라벨이 있을 때 적용합니다. 같은 영상을 다시 확인하면 한 번만 세고 가장 최근 위치로 옮기며 최신 결과를 씁니다. 칩: "Channel: N of last M checked videos AI-labelled". M은 표본의 영상 수입니다(최대 20). 영상 자체의 라벨이 아니라 채널의 확인 결과로 판단하므로 Hide 모드에서도 숨기지 않고 이유와 함께 흐리게 표시합니다. 팝업 스위치 **Also dim channels whose recent videos are mostly AI-labelled**로 이 규칙을 끌 수 있습니다. 꺼도 확인 결과는 계속 저장하므로 다시 켜면 바로 적용됩니다. 팝업에는 현재 이 규칙으로 흐리게 표시 중인 채널이 "N of last M"과 함께 나오며, **Allow**를 누르면 Always shown channels에 들어가 이 규칙보다 우선합니다.
 5. **Listed in AiSList**: AiSList를 켠 경우에만 해당합니다. 칩: "Listed in AiSList".
 
 해당하는 규칙이 없으면 보여 줍니다. 1, 2, 4, 5번은 카드에 채널 링크(`/@handle`이나 `/channel/UC…`)가 있어야 적용됩니다.
@@ -139,7 +139,7 @@ YouTube가 정상적으로 답하지 않으면 모든 탭에서 요청을 한동
 - 설정
 - Hidden channels와 Always shown channels (채널 ID나 @handle, 추가한 시각)
 - 영상별 결과: 영상 ID, 라벨 여부, 확인한 날, 카드를 마지막으로 본 날. 라벨 영상은 채널 ID와 @handle도. 최대 20,000개.
-- 응답에서 본 채널별: 채널 ID, @handle, 마지막으로 확인한 서로 다른 영상 20개의 ID와 각각의 라벨 여부·확인 시각, 마지막 결과를 받은 날. 최대 5,000개. 넘으면 라벨 영상이 적고 오래 안 본 채널부터 지우고, 흐리게 표시 중인 채널과 목록에 있는 채널은 항상 남깁니다.
+- 응답에서 본 채널별: 채널 ID, @handle, 마지막으로 확인한 서로 다른 영상 20개의 ID와 각각의 라벨 여부·확인 시각, 마지막 결과를 받은 날. 최대 5,000개. 넘으면 라벨 영상이 적고 결과가 오래된 채널부터 지웁니다. 흐리게 표시 중인 채널과 목록에 있는 채널은 항상 남깁니다.
 - AiSList를 켰다면: 내려받은 목록과 다운로드 정보 (항목 수, ETag, 시각, 마지막 오류)
 - 요청이 멈췄는지, 언제까지인지, 왜인지, 마지막 요청을 보낸 시각
 - 자가 진단을 마지막으로 돌린 시각과 결과
@@ -175,8 +175,7 @@ YouTube가 정상적으로 답하지 않으면 모든 탭에서 요청을 한동
 | **Hide channels listed in AiSList** | 꺼짐 | [AiSList](https://github.com/Override92/AiSList)에 있는 채널을 거릅니다. 목록은 24시간에 최대 한 번 내려받고, **Refresh now**로 다시 받을 수 있습니다. 처음에는 팝업에 "Community list (optional)" 카드가 **Turn on** / **Not now** 버튼과 함께 뜹니다. |
 | **Hidden channels** | 비어 있음 | **Hide this channel**로 추가한 채널입니다. **Remove**로 뺍니다. |
 | **Always shown channels** | 비어 있음 | **Allow channel**이나 "Dimmed for their channel"의 **Allow**로 추가한 채널입니다. **Remove**로 뺍니다. |
-| **Dimmed for their channel** | — | 채널 규칙이 켜져 있을 때 나옵니다. 지금 4번 규칙으로 흐리게 표시 중인 채널과 "N of last M"을 보여 줍니다. **Allow**를 누르면 Always shown channels에 들어갑니다. 없으면 "None right now."라고 나옵니다. |
-
+| **Dimmed for their channel** | — | 채널 규칙이 켜져 있을 때 나옵니다. 지금 4번 규칙으로 흐리게 표시 중인 채널과 "N of last M"을 보여 줍니다. **Allow**를 누르면 Always shown channels에 추가합니다. 없으면 "None right now."가 나옵니다. |
 한 목록에 채널을 넣으면 다른 목록에서는 빠집니다. **Remove**는 @handle로 넣었든 채널 ID로 넣었든 그 채널을 지웁니다.
 
 팝업에는 열린 YouTube 페이지에서 이유별로 몇 개를 걸렀는지와 요청이 멈췄거나 자가 진단에서 문제가 나왔을 때의 경고도 나옵니다.

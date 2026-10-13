@@ -67,7 +67,7 @@ In this order:
 1. **Always shown channels**: a channel on this list is never filtered.
 2. **Hidden channels**: you added the channel with **Hide this channel**. Chip: "Your blocklist".
 3. **YouTube AI label**: the video itself is labelled. Chip: "YouTube AI label".
-4. **Channel where most checked videos are labelled** (optional, on by default — turn it off in the popup): of the last 20 different videos from this channel checked on your device, at least 5 checked and at least 60% of them labelled. A video checked again counts once and moves to the newest place, with its latest result. Chip: "Channel: N of last M checked videos AI-labelled", where M is the number of videos in that sample (at most 20). These cards are always dimmed with their reason, never hidden, even in Hide mode, because this is an inference rather than a label on the video. The popup switch **Also dim channels whose recent videos are mostly AI-labelled** turns this rule off; checked videos are still counted, so turning it back on applies at once. The popup lists the channels this rule dims right now, each with "N of last M" and an **Allow** button that puts the channel on Always shown channels, which overrides the rule for good.
+4. **Channels where most checked videos are labelled** (on by default; turn it off in the popup): at least 5 of the last 20 different videos from the channel were checked on your device, and at least 60% are labelled. Checking a video again counts it once, moves it to the newest spot, and uses the latest result. Chip: "Channel: N of last M checked videos AI-labelled", where M is the sample size (at most 20). These cards are always dimmed with their reason, never hidden, even in Hide mode, because this is an inference rather than a label on the video. The popup switch **Also dim channels whose recent videos are mostly AI-labelled** turns this rule off. Checked videos are still counted, so it applies as soon as you turn it back on. The popup lists channels currently dimmed by this rule with "N of last M" and an **Allow** button. **Allow** adds the channel to Always shown channels, which overrides this rule.
 5. **Listed in AiSList**: only if you turned AiSList on. Chip: "Listed in AiSList".
 
 Cards that match no rule are shown. Rules 1, 2, 4 and 5 need a channel link on the card (a `/@handle` or `/channel/UC…` link).
@@ -139,7 +139,7 @@ Everything is stored in `chrome.storage.local` on your device. Nothing is stored
 - your settings
 - Hidden channels and Always shown channels (channel ID and/or @handle, and when it was added)
 - results per video: video ID, labelled or not, the day it was checked and the day its card was last seen; for labelled videos also the channel ID and @handle. At most 20,000 videos.
-- per channel seen in a reply: its ID, its @handle, the IDs of the last 20 different videos checked from it, each with whether it is labelled and the time it was checked, and the day of its last result. At most 5,000 channels; past that, channels with fewer labelled videos and not seen for longer are dropped first, and dimmed channels or channels on your lists are always kept.
+- per channel seen in a reply: its ID, its @handle, the IDs of the last 20 different videos checked from it, each with whether it is labelled and the time it was checked, and the day of its last result. At most 5,000 channels; above that, channels with fewer labelled videos and older results are dropped first. Dimmed channels and channels on your lists are always kept.
 - if AiSList is on: the downloaded list and its download details (entry count, ETag, times, last error)
 - whether requests are paused, until when and why, and when the last request was sent
 - when the self-check last ran and its result
@@ -173,8 +173,7 @@ It does not ask for `tabs`, `history`, or "read and change all your data on all 
 | **Hide channels listed in AiSList** | Off | Filters channels on [AiSList](https://github.com/Override92/AiSList). Downloads the list at most once per 24 hours; **Refresh now** downloads it again. On first use the popup offers it in a "Community list (optional)" card with **Turn on** and **Not now**. |
 | **Hidden channels** | empty | Channels added with **Hide this channel**. **Remove** takes one off. |
 | **Always shown channels** | empty | Channels added with **Allow channel**, or with **Allow** under "Dimmed for their channel". **Remove** takes one off. |
-| **Dimmed for their channel** | — | Shown while the channel rule is on: the channels rule 4 dims right now, with "N of last M". **Allow** puts one on Always shown channels. "None right now." when there are none. |
-
+| **Dimmed for their channel** | — | Shown while the channel rule is on. Lists the channels rule 4 currently dims, with "N of last M". **Allow** adds one to Always shown channels. "None right now." appears when there are none. |
 Adding a channel to one list takes it off the other. **Remove** removes the channel whether it was added by @handle or by channel ID.
 
 The popup also shows how many cards were filtered on the open YouTube page for each reason, and a warning when requests are paused or the self-check found a problem.
