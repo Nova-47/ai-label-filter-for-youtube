@@ -8,12 +8,13 @@ YouTube가 직접 "AI로 제작됨" 라벨을 붙인 영상을 흐리게 하거�
 
 **설치:** [Releases](https://github.com/Nova-47/ai-label-filter-for-youtube/releases)에서 zip을 받아 Chrome에 로드합니다([방법](#설치)). Chrome 웹 스토어에는 아직 없습니다. 설치했다면 [60초 안에 확인해 보세요](#60초-안에-확인하기).
 
-<!-- 스크린샷 (실제 캡처가 생기면 넣을 것):
-![데모](docs/demo.gif)
-![홈 피드에서 라벨 붙은 영상이 이유와 함께 흐리게 표시됨](docs/feed-dim.png)
+![데모: 흐리게 처리된 영상을 클릭 한 번으로 다시 표시](docs/demo.gif)
+
+![검색 결과에서 라벨 붙은 영상이 이유와 함께 흐리게 표시됨](docs/feed-dim.png)
+
 ![라벨 붙은 영상의 시청 페이지 배너](docs/watch-banner.png)
+
 ![팝업](docs/popup.png)
--->
 
 > **YouTube가 라벨을 붙인 영상만 거르고, AI 영상 대부분에는 라벨이 없습니다.**
 > 추측하지 않는 대신 치르는 값입니다. 정확하지만 완전하지는 않습니다.
