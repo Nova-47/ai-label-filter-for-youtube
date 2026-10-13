@@ -154,9 +154,10 @@
   // clientVersion is read from the `ytcfg.set({...})` inline script that every
   // youtube.com page ships in its HTML. Script text is plain DOM, so the
   // isolated world can read it: no MAIN-world script, no page-JS hooks, no
-  // window messaging. The value only changes on a full page load, so it is
-  // read once per load. If it is missing we fall back to a known version;
-  // InnerTube accepted a 16-month-old version when tested.
+  // window messaging. The value only changes on a full page load. Only a
+  // value found in the page is kept: at document_start the script may not be
+  // parsed yet, so until then each request looks again and sends a known
+  // version meanwhile (InnerTube accepted a 16-month-old one when tested).
   let clientVersion = null;
   function getClientVersion() {
     if (clientVersion) return clientVersion;
@@ -167,16 +168,16 @@
         if (m) { clientVersion = m[1]; break; }
       }
     } catch { /* fall through */ }
-    return (clientVersion = clientVersion || FALLBACK_CLIENT_VERSION);
+    return clientVersion || FALLBACK_CLIENT_VERSION;
   }
 
-  function request(videoId, masked) {
-    const url = location.origin + '/youtubei/v1/next?prettyPrint=false' +
-      (masked ? '&fields=' + encodeURIComponent(A.NEXT_FIELDS) : '');
+  function request(videoId) {
+    const url = location.origin + '/youtubei/v1/next?prettyPrint=false&fields=' + encodeURIComponent(A.NEXT_FIELDS);
     return fetch(url, {
       method: 'POST',
       credentials: 'omit',   // no cookies: same answer as a logged-out visitor
       redirect: 'manual',    // a redirect here means a block page, see shared.js
+      signal: AbortSignal.timeout(10000), // a hung request would hold the lock below
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         context: { client: { clientName: 'WEB', clientVersion: getClientVersion(), hl: 'en', gl: 'US' } },
@@ -185,43 +186,54 @@
     });
   }
 
-  // One request at a time, for every caller (watch page, card lookups, self-check).
-  let lock = Promise.resolve();
-  function serial(fn) {
-    const p = lock.then(fn, fn);
-    lock = p.catch(() => {});
-    return p;
-  }
+  // Every caller (watch page, card lookups, self-check) in every tab goes
+  // through one Web Lock. Locks are per origin, so all youtube.com tabs share
+  // it (the page can see it too, hence the long name; an incognito window
+  // has its own). The holder keeps it for REQUEST_GAP_MS after the reply, so
+  // requests go out one at a time and at least 1 s apart, browser-wide.
+  const REQUEST_LOCK = 'ai-label-filter-for-youtube:request';
 
-  // → parseNext() result, or null on any failure or while paused.
-  // `record: false` is for the self-check, whose videos must not count
-  // towards channel flags.
-  const lookup = (videoId, record = true) => serial(async () => {
-    if (!alive() || A.breakerOpen(breaker)) return null;
+  // → readResponse() result ({ kind: 'ok', ai, ucid, handle } or kind
+  // 'blocked' | 'bad'), or kind 'network' / 'paused'. `record: false` is for
+  // the self-check, whose videos must not count towards channel flags;
+  // `want()` is asked again once the lock is ours.
+  async function lookup(videoId, { record = true, want } = {}) {
     try {
-      let res = await request(videoId, true);
-      // The mask is the most fragile part. If YouTube rejects it, retry once
-      // unmasked; parseNext reads only the scoped paths either way.
-      if (res.status === 400) res = await request(videoId, false);
-      const body = await res.text();
-      if (A.isBlockedResponse(res.status, res.type, body)) {
-        await trip(res.type === 'opaqueredirect' ? 'redirect' : 'HTTP ' + res.status);
-        return null;
-      }
-      if (!res.ok) return null;
-      const info = A.parseNext(JSON.parse(body));
-      if (record && info.ai !== null) remember(videoId, info);
-      return info;
+      return await navigator.locks.request(REQUEST_LOCK, async () => {
+        if (!alive()) return { kind: 'paused' };
+        // The previous holder may have paused requests a moment ago.
+        breaker = (await chrome.storage.local.get('breaker')).breaker || null;
+        if (A.breakerOpen(breaker) || (want && !want())) return { kind: 'paused' };
+        let r;
+        try {
+          const res = await request(videoId);
+          r = A.readResponse(res.status, res.type, await res.text());
+        } catch (e) {
+          log('lookup failed', videoId, e);
+          r = { kind: 'network' };
+        }
+        if (r.kind === 'blocked') await pause(A.breakerTrip(r.why));
+        else if (r.kind === 'bad') await pause(A.backoff(breaker, r.why));
+        else if (r.kind === 'ok') {
+          if (breaker) await pause(null); // an expired back-off starts over
+          if (record && r.ai !== null) remember(videoId, r);
+        }
+        await sleep(A.REQUEST_GAP_MS);
+        return r;
+      });
     } catch (e) {
       log('lookup failed', videoId, e);
-      return null;
+      return { kind: 'network' };
     }
-  });
+  }
 
-  async function trip(reason) {
-    breaker = A.breakerTrip(reason);
-    queue.length = 0;
-    try { await chrome.storage.local.set({ breaker }); } catch { /* still paused in this tab */ }
+  // Pause YouTube requests in every tab, or with null clear an expired pause.
+  async function pause(b) {
+    breaker = b;
+    if (b) queue.length = 0;
+    try {
+      await (b ? chrome.storage.local.set({ breaker: b }) : chrome.storage.local.remove('breaker'));
+    } catch { /* this tab still knows */ }
   }
 
   function remember(videoId, info) {
@@ -358,7 +370,7 @@
         const vid = queue.shift();
         if (A.cacheGet(cache, vid, A.today()) !== null) continue;
         await lookup(vid);
-        await sleep(1000 + Math.random() * 1000);
+        await sleep(Math.random() * 1000); // jitter on top of the shared 1 s gap
       }
     } finally { pumping = false; }
   }
@@ -386,10 +398,10 @@
     let ai = A.cacheGet(cache, vid, A.today());
     let owner = A.cacheOwner(cache, vid);
     if (ai === null) {
-      const info = await lookup(vid);
-      if (!info) return;
-      ai = info.ai;
-      owner = (info.ucid || info.handle) ? info : null;
+      const r = await lookup(vid);
+      if (r.kind !== 'ok') return;
+      ai = r.ai;
+      owner = (r.ucid || r.handle) ? r : null;
     }
     if (ai === true && gen === navGen && settings.enabled) showBanner(owner);
   }
@@ -460,11 +472,10 @@
       await chrome.storage.local.set({ selfcheck: { at: Date.now(), ok: selfcheck ? selfcheck.ok : null } });
       let ok = null;
       for (const id of A.CANARY_IDS) {
-        const info = await lookup(id, false);
-        if (!info) { ok = null; break; }      // network error or paused: unknown
+        const info = await lookup(id, { record: false });
+        if (info.kind !== 'ok') { ok = null; break; }
         ok = info.ai === true;
         if (ok) break;
-        await sleep(1500);
       }
       await chrome.storage.local.set({ selfcheck: { at: Date.now(), ok } });
     } catch (e) { log('self-check failed', e); }

@@ -26,6 +26,8 @@
   const CACHE_MAX = 20000;
 
   const BREAKER_MS = DAY;        // pause all YouTube requests this long
+  const RETRY_MS = 15 * 60000;   // first pause after a refused request (doubles)
+  const REQUEST_GAP_MS = 1000;   // between two YouTube requests, browser-wide
   const AUTOFLAG_MIN_AI = 2;     // labelled videos needed to flag a channel
 
   const AISLIST_URL =
@@ -187,6 +189,25 @@
   const breakerOpen = (b, now = Date.now()) => !!b && typeof b.until === 'number' && now < b.until;
   const breakerTrip = (reason, now = Date.now()) => ({ until: now + BREAKER_MS, reason: String(reason) });
 
+  // Any other refusal (400: mask or clientVersion rejected, 404, 5xx, a reply
+  // that isn't JSON) pauses requests too: 15 min, doubling while it keeps
+  // happening (`n` in a row), at most 24 h. A good reply clears it. There is
+  // no unmasked retry, so a rejected mask never costs ~400 KB per video.
+  function backoff(prev, reason, now = Date.now()) {
+    const n = ((prev && prev.n) || 0) + 1;
+    return { until: now + Math.min(BREAKER_MS, RETRY_MS * 2 ** (n - 1)), reason: String(reason), n };
+  }
+
+  // What one `next` reply means: { kind: 'blocked' | 'bad', why } or
+  // { kind: 'ok', ai, ucid, handle }.
+  function readResponse(status, type, body) {
+    if (isBlockedResponse(status, type, body)) {
+      return { kind: 'blocked', why: type === 'opaqueredirect' ? 'redirect' : 'HTTP ' + status };
+    }
+    if (!(status >= 200 && status < 300)) return { kind: 'bad', why: 'HTTP ' + status };
+    try { return { kind: 'ok', ...parseNext(JSON.parse(body)) }; } catch { return { kind: 'bad', why: 'not JSON' }; }
+  }
+
   // ── Decision ───────────────────────────────────────────────────────────────
   // Why a card should be hidden, or null to show it. Order matters: the
   // allowlist always wins; the user's own blocklist comes before automatic
@@ -212,11 +233,11 @@
   }
 
   const api = {
-    NEXT_FIELDS, CANARY_IDS, TTL_CLEAN_DAYS, TTL_AI_DAYS, CACHE_MAX, BREAKER_MS,
+    NEXT_FIELDS, CANARY_IDS, TTL_CLEAN_DAYS, TTL_AI_DAYS, CACHE_MAX, BREAKER_MS, RETRY_MS, REQUEST_GAP_MS,
     AUTOFLAG_MIN_AI, AISLIST_URL, DAY,
     isAiBadge, parseNext, isUcid, normalizeHandle, channelFromHref, videoIdFromHref,
     parseList, today, cacheGet, cachePut, cacheOwner, cachePrune, recordVerdict, mergeChannel, isAutoFlagged,
-    isBlockedResponse, breakerOpen, breakerTrip, decide, channelKeys,
+    isBlockedResponse, breakerOpen, breakerTrip, backoff, readResponse, decide, channelKeys,
   };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.AILF = api;

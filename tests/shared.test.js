@@ -211,6 +211,32 @@ test('isBlockedResponse: what trips the breaker', () => {
   assert.equal(A.isBlockedResponse(500, 'basic', ''), false);
 });
 
+test('readResponse: blocked, bad (back off) or ok', () => {
+  const labelled = JSON.stringify(fixture('labelled-yHG-pivADos.json'));
+  assert.deepEqual(A.readResponse(429, 'basic', ''), { kind: 'blocked', why: 'HTTP 429' });
+  assert.deepEqual(A.readResponse(0, 'opaqueredirect', ''), { kind: 'blocked', why: 'redirect' });
+  assert.deepEqual(A.readResponse(200, 'basic', '<html>unusual traffic</html>'), { kind: 'blocked', why: 'HTTP 200' });
+  for (const s of [400, 404, 500, 503]) assert.deepEqual(A.readResponse(s, 'basic', '{}'), { kind: 'bad', why: 'HTTP ' + s });
+  assert.deepEqual(A.readResponse(200, 'basic', '<html>consent</html>'), { kind: 'bad', why: 'not JSON' });
+  assert.deepEqual(A.readResponse(200, 'basic', ''), { kind: 'bad', why: 'not JSON' });
+  assert.deepEqual(A.readResponse(200, 'basic', labelled),
+    { kind: 'ok', ai: true, ucid: 'UCp1mMtCnO_11BC4dbGv4BSA', handle: 'eigi_and_ai' });
+  assert.deepEqual(A.readResponse(200, 'basic', '{}'), { kind: 'ok', ai: null, ucid: null, handle: null });
+});
+
+test('backoff: 15 min, doubling, at most 24 h', () => {
+  const now = 1_700_000_000_000;
+  const min = 60000;
+  let b = A.backoff(null, 'HTTP 400', now);
+  assert.deepEqual(b, { until: now + 15 * min, reason: 'HTTP 400', n: 1 });
+  b = A.backoff(b, 'HTTP 400', now);
+  assert.equal(b.until, now + 30 * min);
+  for (let i = 0; i < 10; i++) b = A.backoff(b, 'HTTP 500', now);
+  assert.equal(b.n, 12);
+  assert.equal(b.until, now + A.BREAKER_MS);
+  assert.equal(A.backoff(A.breakerTrip('HTTP 429', now), 'HTTP 400', now).n, 1); // a block has no count
+});
+
 test('decide: allowlist > blocklist > label > channel flag > AiSList', () => {
   const U = 'UCp1mMtCnO_11BC4dbGv4BSA';
   const idx = (o = {}) => ({
