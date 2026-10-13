@@ -34,7 +34,7 @@
   const VIDEO_LINK_SEL = 'a[href*="/watch?v="], a[href*="/shorts/"]';
   const CHANNEL_LINK_SEL = 'a[href*="/@"], a[href*="/channel/UC"]';
 
-  const DEFAULTS = { enabled: true, mode: 'hide', lookups: false, aislist: false, onboarded: false };
+  const DEFAULTS = { enabled: true, mode: 'dim', lookups: false, aislist: false, onboarded: false };
   const FALLBACK_CLIENT_VERSION = '2.20261012.01.00'; // seen on youtube.com 2026-10-13
 
   // ── State ──────────────────────────────────────────────────────────────────

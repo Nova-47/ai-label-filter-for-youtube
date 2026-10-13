@@ -3,7 +3,7 @@
 // active tab's content script, so no `tabs` permission is needed.
 const A = globalThis.AILF;
 const RAW_ORIGIN = 'https://raw.githubusercontent.com/*';
-const DEFAULTS = { enabled: true, mode: 'hide', lookups: false, aislist: false, onboarded: false };
+const DEFAULTS = { enabled: true, mode: 'dim', lookups: false, aislist: false, onboarded: false };
 const REASONS = {
   label: 'YouTube AI label',
   channel: 'Channel with 2+ labelled videos',

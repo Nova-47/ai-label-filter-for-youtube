@@ -315,6 +315,27 @@ test('auto-flagged channel: marked "channel" with chip, and the CSS never hides 
   assert.match(css, /html\.ailf-on \[data-ailf="channel"\] > \.ailf-chip/);
 });
 
+// Dim is the default, so a filtered card shows its reason out of the box;
+// Hide stays a choice in the popup.
+test('mode: dim by default, hide when chosen', async () => {
+  for (const [settings, dim] of [[undefined, true], [{ mode: 'hide' }, false], [{ mode: 'dim' }, true]]) {
+    const b = browser();
+    const day = Math.floor(b.now() / 86400000);
+    Object.assign(b.store, { selfcheck: { at: b.now() }, verdicts: { aiaiaiaiaia: [1, day, day, 0, 0] } });
+    if (settings) b.store.settings = settings;
+    const t = b.tab('https://www.youtube.com/');
+    const card = t.addCard('aiaiaiaiaia');
+    await b.run(1000);
+    assert.equal(card.dataset.ailf, 'label');
+    assert.equal(t.html.classList.contains('ailf-on'), true);
+    assert.equal(t.html.classList.contains('ailf-dim'), dim, JSON.stringify(settings));
+  }
+  const fs = require('node:fs'), path = require('node:path');
+  const defaults = (f) => /const DEFAULTS = (\{[^}]*\});/.exec(fs.readFileSync(path.join(__dirname, '..', f), 'utf8'))[1];
+  assert.equal(defaults('popup.js'), defaults('content.js'));
+  assert.match(defaults('content.js'), /mode: 'dim'/);
+});
+
 // Review L3: a card reused for another video by changing only its link's
 // href was not re-checked until some other DOM change.
 test('a reused card whose link alone changes is checked again', async () => {
