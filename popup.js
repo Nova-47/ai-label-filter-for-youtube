@@ -3,7 +3,7 @@
 // active tab's content script, so no `tabs` permission is needed.
 const A = globalThis.AILF;
 const RAW_ORIGIN = 'https://raw.githubusercontent.com/*';
-const DEFAULTS = { enabled: true, mode: 'dim', lookups: false, aislist: false, channelRule: true, onboarded: false };
+const DEFAULTS = { enabled: true, mode: 'dim', lookups: false, aislist: false, channelRule: A.CHANNEL_RULE_DEFAULT, onboarded: false };
 const REASONS = {
   label: 'YouTube AI label',
   channel: 'Channel with mostly AI-labelled videos',
@@ -78,6 +78,39 @@ function renderChannels(listKey, list) {
   $(listKey + '-empty').hidden = entries.length > 0;
 }
 
+// Channels the channel rule dims now. "Allow" puts the channel on the Always
+// shown list (and off Hidden channels), which overrides the rule for good.
+function renderFlagged(got) {
+  $('flagged-section').hidden = !settings.channelRule;
+  const ul = $('flagged');
+  ul.replaceChildren();
+  const rows = settings.channelRule ? A.flaggedChannels(got.channels, got.blocked, got.allowed) : [];
+  for (const f of rows) {
+    const li = document.createElement('li');
+    const a = document.createElement('a');
+    a.href = f.handle ? `https://www.youtube.com/@${encodeURIComponent(f.handle)}`
+      : `https://www.youtube.com/channel/${f.ucid}`;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = `${f.handle ? '@' + f.handle : f.ucid} · ${f.ai} of last ${f.checked}`;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'Allow';
+    btn.addEventListener('click', async () => {
+      const g = await chrome.storage.local.get(['channels', 'blocked', 'allowed']);
+      const idx = A.buildIndex(g.channels, g.blocked, g.allowed);
+      const ch = { ucid: f.ucid, handle: f.handle };
+      await chrome.storage.local.set({
+        allowed: A.listPut(g.allowed || {}, ch, idx, Date.now()),
+        blocked: A.listDrop(g.blocked || {}, ch, idx),
+      });
+    });
+    li.append(a, btn);
+    ul.append(li);
+  }
+  $('flagged-empty').hidden = rows.length > 0;
+}
+
 async function render() {
   const got = await chrome.storage.local.get(KEYS);
   settings = { ...DEFAULTS, ...got.settings };
@@ -111,9 +144,7 @@ async function render() {
 
   renderChannels('blocked', got.blocked);
   renderChannels('allowed', got.allowed);
-  const flagged = settings.channelRule ? Object.values(got.channels || {}).filter(A.isAutoFlagged).length : 0;
-  $('flagged').textContent = flagged
-    ? `${flagged} channel${flagged > 1 ? 's' : ''} dimmed for having mostly AI-labelled videos.` : '';
+  renderFlagged(got);
 
   renderPage(await ask({ action: 'status' }));
 }

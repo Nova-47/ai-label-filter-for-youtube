@@ -31,11 +31,16 @@
   const RETRY_MS = 15 * 60000;   // first pause after a refused request (doubles)
   const REQUEST_GAP_MS = 1000;   // between two YouTube requests, browser-wide
   const SELFCHECK_STALE_MS = 5 * 60000; // a self-check unfinished this long was cut off
-  const AUTOFLAG_MIN_AI = 2;     // labelled videos needed to flag a channel (implied by
-                                 // the two below today; kept so the rule reads in full)
+  const AUTOFLAG_MIN_AI = 2;     // labelled videos needed to flag a channel. Never the
+                                 // deciding test today: 5 checked at 60% already means at
+                                 // least 3 labelled. Kept as a floor if those change; left
+                                 // out of user-facing docs for that reason.
   const AUTOFLAG_MIN_CHECKED = 5; // checked videos needed to flag a channel
   const AUTOFLAG_MIN_RATIO = 0.6; // and this share of its checked videos labelled
   const CHANNEL_WINDOW = 20;     // most recent checked videos kept per channel
+  // Default of the popup switch "Also dim channels whose recent videos are mostly
+  // AI-labelled" (setting channelRule). Both content.js and popup.js DEFAULTS use it.
+  const CHANNEL_RULE_DEFAULT = true;
 
   const AISLIST_URL =
     'https://raw.githubusercontent.com/Override92/AiSList/main/AiSList/aislist_blocklist.txt';
@@ -244,6 +249,24 @@
       && n.ai / n.checked >= AUTOFLAG_MIN_RATIO;
   }
 
+  // Channels the channel rule dims right now, for the popup list: auto-flagged
+  // (isAutoFlagged, the same test buildIndex gives decide()) and on neither the
+  // allow nor the block list, matched by channelKeys as decide() does. Most
+  // labelled first. [{ ucid, handle, ai, checked }]
+  function flaggedChannels(channels, blocked, allowed) {
+    const idx = buildIndex(channels, blocked, allowed);
+    const out = [];
+    for (const [ucid, c] of Object.entries(channels || {})) {
+      if (!isAutoFlagged(c)) continue;
+      const keys = channelKeys({ ucid, handle: c.h || null }, idx);
+      if (keys.some((k) => idx.allow.has(k) || idx.block.has(k))) continue;
+      const n = channelCounts(c);
+      out.push({ ucid, handle: c.h || null, ai: n.ai, checked: n.checked });
+    }
+    return out.sort((a, b) => b.ai / b.checked - a.ai / a.checked || b.checked - a.checked
+      || (a.ucid < b.ucid ? -1 : 1));
+  }
+
   // Past `max` entries, drop down to 80%: fewest labelled videos in the
   // window first (old-format entries count as 0), then least recently seen. Auto-flagged channels
   // and the ones in `keep` (block/allow list keys) always stay.
@@ -432,9 +455,9 @@
 
   const api = {
     NEXT_FIELDS, CANARY_IDS, TTL_CLEAN_DAYS, TTL_AI_DAYS, CACHE_MAX, CHANNELS_MAX, BREAKER_MS, RETRY_MS,
-    REQUEST_GAP_MS, SELFCHECK_STALE_MS, AUTOFLAG_MIN_AI, AUTOFLAG_MIN_CHECKED, AUTOFLAG_MIN_RATIO, CHANNEL_WINDOW, AISLIST_URL, DAY, QUEUE_MAX,
+    REQUEST_GAP_MS, SELFCHECK_STALE_MS, AUTOFLAG_MIN_AI, AUTOFLAG_MIN_CHECKED, AUTOFLAG_MIN_RATIO, CHANNEL_WINDOW, CHANNEL_RULE_DEFAULT, AISLIST_URL, DAY, QUEUE_MAX,
     isAiBadge, parseNext, isUcid, normalizeHandle, channelFromHref, videoIdFromHref,
-    parseList, today, cacheGet, cachePut, cacheOwner, cachePrune, recordVerdict, parseEntry, makeEntry, mergeChannel, channelCounts, isAutoFlagged,
+    parseList, today, cacheGet, cachePut, cacheOwner, cachePrune, recordVerdict, parseEntry, makeEntry, mergeChannel, channelCounts, isAutoFlagged, flaggedChannels,
     channelsPrune, mergeDirty, mergeVerdict, isBlockedResponse, breakerOpen, breakerTrip, requestWait, backoff, readResponse,
     selfcheckDue, selfcheckVerdict, enqueue, takeNext, decide, channelKeys, buildIndex, listKeysFor, listPut, listDrop,
   };

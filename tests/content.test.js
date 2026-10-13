@@ -319,7 +319,7 @@ test('card lookups: a card that scrolls away while waiting for the lock is skipp
 test('auto-flagged channel: marked "channel" with chip, and the CSS never hides it', async () => {
   const b = browser();
   const U = 'UCMMmm45yro8eyHzadofoG4A';
-  Object.assign(b.store, { selfcheck: { at: b.now() }, channels: { [U]: { h: 'foreverharmony_official', w: ['v1:a1', 'v2:b1', 'v3:c1', 'v4:d1', 'v5:e0'] } } });
+  Object.assign(b.store, { selfcheck: { at: b.now() }, settings: { channelRule: true }, channels: { [U]: { h: 'foreverharmony_official', w: ['v1:a1', 'v2:b1', 'v3:c1', 'v4:d1', 'v5:e0'] } } });
   const t = b.tab('https://www.youtube.com/');
   const flagged = t.addCard('aaaaaaaaaaa', '/@ForeverHarmony_Official');
   const plain = t.addCard('bbbbbbbbbbb', '/@someoneelse');
@@ -337,7 +337,7 @@ test('auto-flagged channel: marked "channel" with chip, and the CSS never hides 
 });
 
 // Owner decision: the channel rule has a popup switch (setting channelRule,
-// on by default). Off: no card gets the 'channel' reason, labelled videos are
+// default A.CHANNEL_RULE_DEFAULT, on). Off: no card gets the 'channel' reason, labelled videos are
 // still filtered, and channel windows keep being recorded.
 test('channel rule switch: off → no channel marks, label rule and recording go on; on → back at once', async () => {
   const U = 'UCMMmm45yro8eyHzadofoG4A';
@@ -360,13 +360,41 @@ test('channel rule switch: off → no channel marks, label rule and recording go
   b.local.set({ settings: { channelRule: true } });          // switched on in the popup
   await b.run(2000);
   assert.equal(flagged.dataset.ailf, 'channel');
+  assert.equal(flagged.children[0].className, 'ailf-chip');
+  b.local.set({ settings: { channelRule: false } });         // switched off live
+  await b.run(2000);
+  assert.equal('ailf' in flagged.dataset, false);            // mark and chip clear at once
+  assert.equal(flagged.children.filter((c) => c.className === 'ailf-chip').length, 0);
+  assert.equal(labelled.dataset.ailf, 'label');
+  b.local.set({ settings: { channelRule: true } });
+  await b.run(2000);
+  assert.equal(flagged.dataset.ailf, 'channel');
   b.local.set({ settings: {} });                             // default: on
   await b.run(2000);
   assert.equal(flagged.dataset.ailf, 'channel');
-  b.local.set({ settings: { channelRule: false } });
-  await b.run(2000);
-  assert.equal('ailf' in flagged.dataset, false);
   assert.equal(labelled.dataset.ailf, 'label');
+});
+
+test('channel rule: on by default; the popup "Allow" (allow list entry) overrides it for good', async () => {
+  const b = browser();
+  const U = 'UCMMmm45yro8eyHzadofoG4A';
+  const channels = { [U]: { h: 'foreverharmony_official', w: ['v1:a1', 'v2:b1', 'v3:c1', 'v4:d1', 'v5:e0'] } };
+  Object.assign(b.store, { selfcheck: { at: b.now() }, channels });
+  const t = b.tab('https://www.youtube.com/');
+  const card = t.addCard('aaaaaaaaaaa', '/@ForeverHarmony_Official');
+  await b.run(1000);
+  assert.equal(A.CHANNEL_RULE_DEFAULT, true);
+  assert.equal(card.dataset.ailf, 'channel');                      // no settings saved: on
+  // What the popup's Allow button writes for a row of A.flaggedChannels().
+  const [row] = A.flaggedChannels(channels, {}, {});
+  const idx = A.buildIndex(channels, {}, {});
+  b.local.set({ allowed: A.listPut({}, { ucid: row.ucid, handle: row.handle }, idx, b.now()), blocked: {} });
+  await b.run(2000);
+  assert.equal('ailf' in card.dataset, false);
+  b.local.set({ settings: { channelRule: true } });                // still overridden
+  await b.run(2000);
+  assert.equal('ailf' in card.dataset, false);
+  assert.deepEqual(A.flaggedChannels(channels, b.store.blocked, b.store.allowed), []);
 });
 
 // Dim is the default, so a filtered card shows its reason out of the box;
@@ -388,7 +416,10 @@ test('mode: dim by default, hide when chosen', async () => {
   const defaults = (f) => /const DEFAULTS = (\{[^}]*\});/.exec(fs.readFileSync(path.join(__dirname, '..', f), 'utf8'))[1];
   assert.equal(defaults('popup.js'), defaults('content.js'));
   assert.match(defaults('content.js'), /mode: 'dim'/);
-  assert.match(defaults('content.js'), /channelRule: true/);
+  // One constant for the channel-rule default, used by both DEFAULTS.
+  assert.match(defaults('content.js'), /channelRule: A\.CHANNEL_RULE_DEFAULT,/);
+  assert.match(defaults('popup.js'), /channelRule: A\.CHANNEL_RULE_DEFAULT,/);
+  assert.equal(A.CHANNEL_RULE_DEFAULT, true);
 });
 
 // Review L3: a card reused for another video by changing only its link's

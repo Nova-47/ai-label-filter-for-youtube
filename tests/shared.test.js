@@ -618,3 +618,32 @@ test('mask covers the two paths and nothing from the sidebar', () => {
   const open = (A.NEXT_FIELDS.match(/\(/g) || []).length;
   assert.equal(open, (A.NEXT_FIELDS.match(/\)/g) || []).length);
 });
+
+// The popup lists the channels the channel rule dims, with the same test
+// content.js uses (isAutoFlagged) and minus allowed or hidden channels.
+test('flaggedChannels: auto-flagged only, minus allow/block lists, most labelled first', () => {
+  const U1 = 'UCaaaaaaaaaaaaaaaaaaaaaa', U2 = 'UCbbbbbbbbbbbbbbbbbbbbbb', U3 = 'UCcccccccccccccccccccccc', U4 = 'UCdddddddddddddddddddddd';
+  const channels = {
+    [U1]: { h: 'four', w: ['v1:a1', 'v2:b1', 'v3:c1', 'v4:d1', 'v5:e0'] },          // 4 of 5
+    [U2]: { h: 'five', w: ['v1:a1', 'v2:b1', 'v3:c1', 'v4:d1', 'v5:e1'] },          // 5 of 5
+    [U3]: { h: 'few', w: ['v1:a1', 'v2:b1', 'v3:c1', 'v4:d1'] },                   // under 5 checked
+    [U4]: { w: ['v1:a1', 'v2:b1', 'v3:c1', 'v4:d0', 'v5:e0'] },                     // 3 of 5, no handle
+  };
+  assert.deepEqual(A.flaggedChannels(channels, {}, {}), [
+    { ucid: U2, handle: 'five', ai: 5, checked: 5 },
+    { ucid: U1, handle: 'four', ai: 4, checked: 5 },
+    { ucid: U4, handle: null, ai: 3, checked: 5 },
+  ]);
+  for (const c of Object.values(channels)) {
+    assert.equal(A.flaggedChannels({ x: c }, {}, {}).length, A.isAutoFlagged(c) ? 1 : 0);
+  }
+  // Allowed by handle only still matches the UC id (channelKeys, as decide()).
+  const allowed = { '@four': { ucid: null, handle: 'four', added: 1 } };
+  const blocked = { [U4]: { ucid: U4, handle: null, added: 1 } };
+  assert.deepEqual(A.flaggedChannels(channels, blocked, allowed).map((f) => f.ucid), [U2]);
+  assert.deepEqual(A.flaggedChannels(null, null, null), []);
+  // An allow entry beats the rule in decide().
+  const idx = A.buildIndex(channels, blocked, allowed);
+  assert.equal(A.decide(false, { ucid: U1 }, idx), null);
+  assert.equal(A.decide(false, { ucid: U2 }, idx), 'channel');
+});
