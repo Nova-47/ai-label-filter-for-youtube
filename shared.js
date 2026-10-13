@@ -25,6 +25,7 @@
   const TTL_CLEAN_DAYS = 30;
   const TTL_AI_DAYS = 180;
   const CACHE_MAX = 20000;
+  const CHANNELS_MAX = 5000;
 
   const BREAKER_MS = DAY;        // pause all YouTube requests this long
   const RETRY_MS = 15 * 60000;   // first pause after a refused request (doubles)
@@ -158,12 +159,13 @@
   }
 
   // ── Channel aggregates ─────────────────────────────────────────────────────
-  // channels: { ucid: { h: handle, ai: [videoIds] } }.
+  // channels: { ucid: { h: handle, ai: [videoIds], d: last verdict day } }.
   // Labelled video ids are kept (max 5) so the same video is never counted twice.
-  function recordVerdict(channels, ucid, handle, videoId, ai) {
+  function recordVerdict(channels, ucid, handle, videoId, ai, day) {
     if (!isUcid(ucid)) return channels;
     const c = channels[ucid] || (channels[ucid] = { h: null, ai: [] });
     if (handle) c.h = handle;
+    c.d = day;
     if (ai && !c.ai.includes(videoId) && c.ai.length < 5) c.ai.push(videoId);
     return channels;
   }
@@ -171,10 +173,33 @@
   // Two tabs may have updated the same channel; keep the union of both.
   function mergeChannel(a, b) {
     if (!a || !b) return a || b;
-    return { h: b.h || a.h, ai: [...new Set([...a.ai, ...b.ai])].slice(0, 5) };
+    return { h: b.h || a.h, ai: [...new Set([...a.ai, ...b.ai])].slice(0, 5), d: Math.max(a.d || 0, b.d || 0) };
   }
 
   const isAutoFlagged = (c) => !!c && Array.isArray(c.ai) && c.ai.length >= AUTOFLAG_MIN_AI;
+
+  // Past `max` entries, drop down to 80%: channels without a labelled video
+  // first, then the rest, least recently seen first. Auto-flagged channels
+  // and the ones in `keep` (block/allow list keys) always stay.
+  function channelsPrune(channels, keep, max = CHANNELS_MAX) {
+    const ids = Object.keys(channels);
+    if (ids.length <= max) return channels;
+    const n = (u) => (Array.isArray(channels[u].ai) ? channels[u].ai.length : 0);
+    const out = ids.filter((u) => !isAutoFlagged(channels[u]) && !keep.has(u))
+      .sort((a, b) => n(a) - n(b) || (channels[a].d || 0) - (channels[b].d || 0));
+    for (const u of out.slice(0, ids.length - Math.floor(max * 0.8))) delete channels[u];
+    return channels;
+  }
+
+  // ── Saving ─────────────────────────────────────────────────────────────────
+  // Tabs share storage. A save re-reads it and lays the entries this tab
+  // changed (`ids`) on top: verdicts newest-checked wins, channels merge.
+  function mergeDirty(stored, mine, ids, merge) {
+    for (const id of ids) if (mine[id]) stored[id] = merge(stored[id], mine[id]);
+    return stored;
+  }
+
+  const mergeVerdict = (a, b) => (a && a[1] > b[1] ? a : b);
 
   // ── Circuit breaker ────────────────────────────────────────────────────────
   // A 403/429, a redirect (requests use redirect:'manual'; `next` never
@@ -275,10 +300,11 @@
   }
 
   const api = {
-    NEXT_FIELDS, CANARY_IDS, TTL_CLEAN_DAYS, TTL_AI_DAYS, CACHE_MAX, BREAKER_MS, RETRY_MS, REQUEST_GAP_MS,
+    NEXT_FIELDS, CANARY_IDS, TTL_CLEAN_DAYS, TTL_AI_DAYS, CACHE_MAX, CHANNELS_MAX, BREAKER_MS, RETRY_MS, REQUEST_GAP_MS,
     AUTOFLAG_MIN_AI, AISLIST_URL, DAY, QUEUE_MAX,
     isAiBadge, parseNext, isUcid, normalizeHandle, channelFromHref, videoIdFromHref,
     parseList, today, cacheGet, cachePut, cacheOwner, cachePrune, recordVerdict, mergeChannel, isAutoFlagged,
+    channelsPrune, mergeDirty, mergeVerdict,
     isBlockedResponse, breakerOpen, breakerTrip, backoff, readResponse, selfcheckDue, selfcheckVerdict, enqueue, takeNext, decide, channelKeys,
   };
   if (typeof module === 'object' && module.exports) module.exports = api;

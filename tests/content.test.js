@@ -169,3 +169,36 @@ test('self-check: HTTP 400 warns, canaries gone do not', async () => {
   assert.deepEqual(await run(() => reply(200, fixture('normal-dQw4w9WgXcQ.json'))), ['broken', 2]);
   assert.deepEqual(await run(() => new Error('offline')), ['unknown', 1]);
 });
+
+// Review E5: two tabs saving at about the same time; one tab's verdict and
+// channel used to be overwritten by the other's write.
+test('saving: two tabs saving at once both keep their verdicts', async () => {
+  const b = browser({
+    setLatency: 1500,                                   // a slow write widens the window
+    respond: (r) => reply(200, fixture(r.videoId === 'dQw4w9WgXcQ' ? 'normal-dQw4w9WgXcQ.json' : 'autodubbed-nG8aoy69iIo.json')),
+  });
+  b.store.selfcheck = { at: b.now() };
+  b.tab(watch('dQw4w9WgXcQ'));
+  b.tab(watch('nG8aoy69iIo'));
+  await b.run(30000);
+  assert.deepEqual(Object.keys(b.store.verdicts).sort(), ['dQw4w9WgXcQ', 'nG8aoy69iIo']);
+  assert.deepEqual(Object.keys(b.store.channels).sort(), ['UC8F8MJyWevV2EzzLxZnSRLg', 'UCuAXFkgsw1L7xaCfnd5JJOw']);
+});
+
+test('saving: seen-day updates alone write nothing; only changed keys are written', async () => {
+  const NO_OWNER = '{"contents":{"twoColumnWatchNextResults":{"results":{"results":{"contents":[{"videoPrimaryInfoRenderer":{}}]}}}}}';
+  const b = browser({ respond: (r) => reply(200, r.videoId === 'dQw4w9WgXcQ' ? fixture('normal-dQw4w9WgXcQ.json') : NO_OWNER) });
+  const day = Math.floor(b.now() / 86400000);
+  Object.assign(b.store, { selfcheck: { at: b.now() }, verdicts: { aaaaaaaaaaa: [0, day - 3, day - 3] } });
+  const t = b.tab('https://www.youtube.com/');
+  t.addCard('aaaaaaaaaaa');
+  await b.run(10000);
+  assert.deepEqual(b.writes, []);                         // the card was seen today: no write for that
+  t.navigate(watch('bbbbbbbbbbb'));                       // verdict without a channel
+  await b.run(10000);
+  assert.deepEqual(b.writes, ['verdicts']);
+  assert.equal(b.store.verdicts.aaaaaaaaaaa[2], day);     // the seen day rode along
+  t.navigate(watch('dQw4w9WgXcQ'));
+  await b.run(10000);
+  assert.deepEqual(b.writes, ['verdicts', 'channels,verdicts']);
+});

@@ -12,7 +12,7 @@ const fixture = (name) => src('tests/fixtures/' + name);
 const flush = async () => { for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r)); };
 const VIDEO_LINK = '/watch?v=';
 
-function browser({ latency = 0, netMs = 100, respond = () => ({ status: 200, body: fixture('normal-dQw4w9WgXcQ.json') }) } = {}) {
+function browser({ latency = 0, setLatency = latency, netMs = 100, respond = () => ({ status: 200, body: fixture('normal-dQw4w9WgXcQ.json') }) } = {}) {
   let now = Date.UTC(2026, 9, 13, 12);
   let seq = 0;
   const timers = [];
@@ -32,10 +32,12 @@ function browser({ latency = 0, netMs = 100, respond = () => ({ status: 200, bod
     await flush();
   }
 
-  // chrome.storage.local: every call takes `latency` ms; onChanged goes to all tabs.
+  // chrome.storage.local: get/remove take `latency` ms, set `setLatency` ms
+  // (writing a big object is the slow part); onChanged goes to all tabs.
   const store = {};
+  const writes = [];   // keys of every set(), in order
   const listeners = [];
-  const later = (fn) => new Promise((res) => setTimeout(() => res(fn()), latency));
+  const later = (fn, ms = latency) => new Promise((res) => setTimeout(() => res(fn()), ms));
   const changed = (ch) => setTimeout(() => { for (const l of listeners) l(structuredClone(ch), 'local'); });
   const local = {
     get: (keys) => later(() => {
@@ -43,11 +45,15 @@ function browser({ latency = 0, netMs = 100, respond = () => ({ status: 200, bod
       for (const k of [].concat(keys)) if (k in store) out[k] = structuredClone(store[k]);
       return out;
     }),
-    set: (o) => later(() => {
-      const ch = {};
-      for (const [k, v] of Object.entries(o)) { ch[k] = { oldValue: store[k], newValue: structuredClone(v) }; store[k] = structuredClone(v); }
-      changed(ch);
-    }),
+    set: (o) => {
+      const copy = structuredClone(o);   // like Chrome: the value as of the call
+      return later(() => {
+        writes.push(Object.keys(copy).sort().join(','));
+        const ch = {};
+        for (const [k, v] of Object.entries(copy)) { ch[k] = { oldValue: store[k], newValue: structuredClone(v) }; store[k] = v; }
+        changed(ch);
+      }, setLatency);
+    },
     remove: (keys) => later(() => {
       const ch = {};
       for (const k of [].concat(keys)) if (k in store) { ch[k] = { oldValue: store[k] }; delete store[k]; }
@@ -164,7 +170,7 @@ function browser({ latency = 0, netMs = 100, respond = () => ({ status: 200, bod
     };
   }
 
-  return { tab, run, store, requests, now: () => now, get maxInflight() { return maxInflight; } };
+  return { tab, run, store, writes, requests, now: () => now, get maxInflight() { return maxInflight; } };
 }
 
 // The few DOM element features content.js uses.

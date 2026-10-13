@@ -49,7 +49,10 @@
   let listSet = null;    // AiSList entries, only while the subscription is on
   let idx = null;        // lookup sets for shared.js decide()
   let ready = false;
-  const dirty = { verdicts: new Set(), channels: new Set() }; // unsaved, merged on save
+  // Unsaved changes, id → change number, so a save only clears what it wrote.
+  const dirty = { verdicts: new Map(), channels: new Map() };
+  let changeNo = 0;
+  const touch = (map, id) => map.set(id, ++changeNo);
   const shown = new Set();  // videos the user chose to "show anyway"
   let peek = false;         // popup "reveal": dim view in this tab only
 
@@ -103,12 +106,6 @@
     checkNav();
   }
 
-  // Keep entries this tab changed but has not saved yet.
-  const keepDirty = (fresh, mine, ids) => {
-    for (const id of ids) if (mine[id]) fresh[id] = mine[id];
-    return fresh;
-  };
-
   chrome.storage.onChanged.addListener((ch, area) => {
     if (area !== 'local' || !ready) return;
     const wasEnabled = settings.enabled;
@@ -116,8 +113,9 @@
     if (ch.blocked) blocked = ch.blocked.newValue || {};
     if (ch.allowed) allowed = ch.allowed.newValue || {};
     if (ch.breaker) breaker = ch.breaker.newValue || null;
-    if (ch.verdicts) cache = keepDirty(ch.verdicts.newValue || {}, cache, dirty.verdicts);
-    if (ch.channels) channels = keepDirty(ch.channels.newValue || {}, channels, dirty.channels);
+    // Keep what this tab changed but has not saved yet.
+    if (ch.verdicts) cache = A.mergeDirty(ch.verdicts.newValue || {}, cache, dirty.verdicts.keys(), A.mergeVerdict);
+    if (ch.channels) channels = A.mergeDirty(ch.channels.newValue || {}, channels, dirty.channels.keys(), A.mergeChannel);
     if (ch.aislistData) setList(ch.aislistData.newValue);
     else if (ch.settings && settings.aislist && !listSet) {
       chrome.storage.local.get('aislistData').then((g) => { setList(g.aislistData); rebuildIndex(); scheduleScan(); }, () => {});
@@ -129,7 +127,10 @@
     scheduleScan();
   });
 
-  // Debounced. Re-reads storage and merges, so tabs don't overwrite each other.
+  // Debounced. Under a Web Lock shared by all tabs: re-read storage, lay this
+  // tab's changes on top, write. So no tab's verdicts are lost to another's
+  // write (review E5). Only the keys with changes are written.
+  const SAVE_LOCK = 'ai-label-filter-for-youtube:save';
   let saveTimer = 0;
   function scheduleSave() {
     if (!saveTimer) saveTimer = setTimeout(save, 3000);
@@ -139,14 +140,21 @@
     saveTimer = 0;
     if (!alive()) return;
     try {
-      const got = await chrome.storage.local.get(['verdicts', 'channels']);
-      const v = keepDirty(got.verdicts || {}, cache, dirty.verdicts);
-      const c = got.channels || {};
-      for (const u of dirty.channels) if (channels[u]) c[u] = A.mergeChannel(c[u], channels[u]);
-      dirty.verdicts.clear();
-      dirty.channels.clear();
-      A.cachePrune(v, A.today());
-      await chrome.storage.local.set({ verdicts: v, channels: c });
+      await navigator.locks.request(SAVE_LOCK, async () => {
+        const got = await chrome.storage.local.get(['verdicts', 'channels']);
+        const v = new Map(dirty.verdicts), c = new Map(dirty.channels);
+        const out = {};
+        if (v.size) out.verdicts = A.cachePrune(A.mergeDirty(got.verdicts || {}, cache, v.keys(), A.mergeVerdict), A.today());
+        if (c.size) {
+          const keep = new Set([...Object.values(blocked), ...Object.values(allowed)].flatMap((e) => A.channelKeys(e, idx)));
+          out.channels = A.channelsPrune(A.mergeDirty(got.channels || {}, channels, c.keys(), A.mergeChannel), keep);
+        }
+        if (!v.size && !c.size) return;
+        await chrome.storage.local.set(out);
+        for (const [k, saved] of [['verdicts', v], ['channels', c]]) {
+          for (const [id, n] of saved) if (dirty[k].get(id) === n) dirty[k].delete(id);
+        }
+      });
     } catch (e) { log('save failed', e); }
   }
 
@@ -238,10 +246,10 @@
 
   function remember(videoId, info) {
     A.cachePut(cache, videoId, info.ai, A.today(), info);
-    dirty.verdicts.add(videoId);
+    touch(dirty.verdicts, videoId);
     if (info.ucid) {
-      A.recordVerdict(channels, info.ucid, info.handle, videoId, info.ai);
-      dirty.channels.add(info.ucid);
+      A.recordVerdict(channels, info.ucid, info.handle, videoId, info.ai, A.today());
+      touch(dirty.channels, info.ucid);
     }
     rebuildIndex();
     scheduleSave();
@@ -303,7 +311,8 @@
     if (!vid) return;
     const ch = cardChannel(card);
     const ai = A.cacheGet(cache, vid, day);
-    if (ai !== null && cache[vid][2] !== day) { cache[vid][2] = day; dirty.verdicts.add(vid); scheduleSave(); }
+    // Last-seen day, for eviction: saved with the next verdict, never on its own.
+    if (ai !== null && cache[vid][2] !== day) { cache[vid][2] = day; touch(dirty.verdicts, vid); }
     const reason = settings.enabled && !shown.has(vid) ? A.decide(ai, ch, idx) : null;
     if (reason) mark(card, reason, ch);
     else {

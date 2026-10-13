@@ -171,21 +171,48 @@ test('cache: prune drops expired first, then least recently seen, down to 80%', 
 test('channel aggregates and auto-flag (2+ labelled videos)', () => {
   const ch = {};
   const U = 'UCp1mMtCnO_11BC4dbGv4BSA';
-  A.recordVerdict(ch, U, 'eigi_and_ai', 'vid00000001', true);
-  A.recordVerdict(ch, U, 'eigi_and_ai', 'vid00000001', true); // same video again
+  A.recordVerdict(ch, U, 'eigi_and_ai', 'vid00000001', true, 100);
+  A.recordVerdict(ch, U, 'eigi_and_ai', 'vid00000001', true, 100); // same video again
   assert.equal(A.isAutoFlagged(ch[U]), false);
-  A.recordVerdict(ch, U, null, 'vid00000002', false);
+  A.recordVerdict(ch, U, null, 'vid00000002', false, 101);
   assert.equal(A.isAutoFlagged(ch[U]), false);
-  A.recordVerdict(ch, U, null, 'vid00000003', true);
+  A.recordVerdict(ch, U, null, 'vid00000003', true, 102);
   assert.equal(A.isAutoFlagged(ch[U]), true);
-  assert.equal(ch[U].h, 'eigi_and_ai');
-  A.recordVerdict(ch, 'not-a-ucid', 'x', 'vid00000004', true);
+  assert.deepEqual(ch[U], { h: 'eigi_and_ai', ai: ['vid00000001', 'vid00000003'], d: 102 });
+  A.recordVerdict(ch, 'not-a-ucid', 'x', 'vid00000004', true, 102);
   assert.equal(Object.keys(ch).length, 1);
   assert.equal(A.isAutoFlagged(undefined), false);
   assert.equal(A.isAutoFlagged({ ai: 'corrupt' }), false);
-  const merged = A.mergeChannel({ h: null, ai: ['a'] }, { h: 'x', ai: ['b', 'a'] });
-  assert.deepEqual(merged, { h: 'x', ai: ['a', 'b'] });
+  const merged = A.mergeChannel({ h: null, ai: ['a'], d: 7 }, { h: 'x', ai: ['b', 'a'], d: 5 });
+  assert.deepEqual(merged, { h: 'x', ai: ['a', 'b'], d: 7 });
   assert.equal(A.isAutoFlagged(merged), true);
+});
+
+test('channelsPrune: bounded; flagged and listed channels stay', () => {
+  const ch = {};
+  const id = (i) => 'UC' + String(i).padStart(22, '0');
+  for (let i = 0; i < 10; i++) ch[id(i)] = { h: null, ai: [], d: 100 + i };
+  ch[id(0)].ai = ['x1', 'x2'];                       // auto-flagged, oldest
+  ch[id(1)].ai = ['x3'];                             // one labelled video
+  const keep = new Set([id(2)]);                     // on a block/allow list
+  A.channelsPrune(ch, keep, 10);
+  assert.equal(Object.keys(ch).length, 10);          // at the cap: untouched
+  ch[id(10)] = { h: null, ai: [], d: 200 };
+  A.channelsPrune(ch, keep, 10);
+  assert.deepEqual(Object.keys(ch).sort(), [0, 1, 2, 6, 7, 8, 9, 10].map(id)); // 80%: the 3 oldest plain ones go
+  const tight = { [id(0)]: { ai: ['a', 'b'] }, [id(1)]: { ai: ['c'], d: 1 }, [id(2)]: { ai: [], d: 9 } };
+  A.channelsPrune(tight, new Set(), 1);
+  assert.deepEqual(Object.keys(tight), [id(0)]);     // plain first, then one-label; flagged stays
+});
+
+test('mergeDirty: a save keeps the other tab\'s entries and lays its own on top', () => {
+  const stored = { a: [0, 10, 10], b: [1, 10, 12, 'UCx', 0] };
+  const mine = { b: [1, 9, 13, 'UCx', 0], c: [0, 11, 11], d: [0, 11, 11] };
+  assert.deepEqual(A.mergeDirty(stored, mine, ['b', 'c', 'gone'], A.mergeVerdict), {
+    a: [0, 10, 10], b: [1, 10, 12, 'UCx', 0], c: [0, 11, 11], // b: the newer check wins; d: not dirty
+  });
+  const chans = A.mergeDirty({ U1: { h: 'x', ai: ['v1'], d: 3 } }, { U1: { h: null, ai: ['v2'], d: 4 } }, ['U1'], A.mergeChannel);
+  assert.deepEqual(chans, { U1: { h: 'x', ai: ['v1', 'v2'], d: 4 } });
 });
 
 test('circuit breaker state transitions', () => {
