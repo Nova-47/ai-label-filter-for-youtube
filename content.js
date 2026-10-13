@@ -208,7 +208,7 @@
         if (r.kind === 'blocked') await pause(A.breakerTrip(r.why));
         else if (r.kind === 'bad') await pause(A.backoff(breaker, r.why));
         else if (r.kind === 'ok') {
-          if (breaker) await pause(null); // an expired back-off starts over
+          if (breaker) await recovered(); // an expired back-off starts over
           if (record && r.ai !== null) remember(videoId, r);
         }
         await sleep(A.REQUEST_GAP_MS);
@@ -227,6 +227,16 @@
     try {
       await (b ? chrome.storage.local.set({ breaker: b }) : chrome.storage.local.remove('breaker'));
     } catch { /* this tab still knows */ }
+  }
+
+  // A good reply after a pause: requests work again, so a self-check
+  // "refused" warning goes too (a single 5xx used to leave it up all day).
+  async function recovered() {
+    await pause(null);
+    try {
+      const { selfcheck } = await chrome.storage.local.get('selfcheck');
+      if (selfcheck && selfcheck.state === 'error') await chrome.storage.local.set({ selfcheck: { at: selfcheck.at } });
+    } catch { /* the warning stays until the next run */ }
   }
 
   function remember(videoId, info) {

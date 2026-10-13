@@ -201,6 +201,23 @@ test('self-check: a run paused before it could send is given back', async () => 
   assert.equal(b.store.selfcheck.state, 'error');
 });
 
+// Review N3: one 503 on the canary used to leave the warning up for a day
+// after later replies were fine.
+test('self-check: a "refused" warning clears on the next good reply', async () => {
+  let n = 0;
+  const b = browser({ respond: () => (n++ ? reply(200, fixture('normal-dQw4w9WgXcQ.json')) : reply(503)) });
+  const t = b.tab('https://www.youtube.com/');
+  await b.run(10000);
+  const at = b.store.selfcheck.at;
+  assert.equal(b.store.selfcheck.state, 'error');
+  await b.run(16 * 60000);
+  t.navigate(watch('aaaaaaaaaaa'));
+  await b.run(10000);
+  assert.deepEqual(b.requests.map((r) => r.videoId), [LABELLED, 'aaaaaaaaaaa']);  // the check does not rerun
+  assert.equal('breaker' in b.store, false);
+  assert.deepEqual(b.store.selfcheck, { at });
+});
+
 // Review E5: two tabs saving at about the same time; one tab's verdict and
 // channel used to be overwritten by the other's write.
 test('saving: two tabs saving at once both keep their verdicts', async () => {
