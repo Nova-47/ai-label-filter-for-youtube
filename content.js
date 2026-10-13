@@ -478,6 +478,12 @@
           results.push(r);
           if (r.kind !== 'ok' || r.ai === true) break;
         }
+        // Not sent: paused meanwhile (often by this tab's own watch-page
+        // request, which queues first). Give today's run back to try later.
+        if (results[results.length - 1].kind === 'paused') {
+          await (selfcheck ? chrome.storage.local.set({ selfcheck }) : chrome.storage.local.remove('selfcheck'));
+          return;
+        }
         await chrome.storage.local.set({ selfcheck: { at: Date.now(), state: A.selfcheckVerdict(results) } });
       });
     } catch (e) { log('self-check failed', e); }

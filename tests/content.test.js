@@ -185,6 +185,22 @@ test('self-check: HTTP 400 and unreadable labels warn, one canary gone does not'
   assert.deepEqual(await run(() => new Error('offline')), ['unknown', 1]);
 });
 
+// Review N2: opened on a watch page, the canary queued behind the page's own
+// request; that one was refused, so the canary was never sent, yet the day's
+// run was used up as "unknown".
+test('self-check: a run paused before it could send is given back', async () => {
+  const b = browser({ respond: () => reply(400, '{"error":{}}') });
+  const t = b.tab(watch('aaaaaaaaaaa'));
+  await b.run(10000);
+  assert.deepEqual(b.requests.map((r) => r.videoId), ['aaaaaaaaaaa']);  // the canary was not sent
+  assert.equal('selfcheck' in b.store, false);                          // and the run not used up
+  await b.run(15 * 60000);                                              // back-off over
+  t.navigate('https://www.youtube.com/');
+  await b.run(10000);
+  assert.deepEqual(b.requests.map((r) => r.videoId), ['aaaaaaaaaaa', LABELLED]);
+  assert.equal(b.store.selfcheck.state, 'error');
+});
+
 // Review E5: two tabs saving at about the same time; one tab's verdict and
 // channel used to be overwritten by the other's write.
 test('saving: two tabs saving at once both keep their verdicts', async () => {
