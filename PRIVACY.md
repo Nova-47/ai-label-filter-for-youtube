@@ -13,7 +13,7 @@ Everything is kept in your browser's extension storage on your device (`chrome.s
 - a result per checked video: its ID, whether it carries YouTube's AI label, the day it was checked and the day its card was last seen, and for labelled videos the channel's ID and @handle. Results are kept for 30 days for unlabelled videos and 180 days for labelled ones, for at most 20,000 videos.
 - per channel seen in a result: its ID, its @handle, the IDs of up to 5 of its labelled videos (used to recognise channels with 2 or more labelled videos), and the day of its last result, for at most 5,000 channels
 - if you turned AiSList on: the downloaded copy of the list, its entry count, its ETag, when it was last downloaded or tried, and the last download error
-- whether requests to YouTube are paused, until when and why
+- whether requests to YouTube are paused, until when and why, and when the last request was sent
 - when the daily self-check last ran and its result
 
 The number of filtered cards is not stored; the popup asks the open YouTube tab for it each time.

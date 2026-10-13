@@ -142,7 +142,7 @@ Everything is stored in `chrome.storage.local` on your device and nowhere else (
 - results per video: video ID, labelled or not, the day it was checked and the day its card was last seen; for labelled videos also the channel ID and @handle. At most 20,000 videos.
 - per channel seen in a reply: its ID, its @handle, the IDs of up to 5 of its labelled videos, and the day of its last result. At most 5,000 channels; past that, channels with fewer labelled videos and not seen for longer are dropped first, and channels with 2+ labelled videos or on your lists are always kept.
 - if AiSList is on: the downloaded list and its download details (entry count, ETag, times, last error)
-- whether requests are paused, until when and why
+- whether requests are paused, until when and why, and when the last request was sent
 - when the self-check last ran and its result
 
 The number of filtered cards is not stored: the popup asks the open YouTube tab each time. Uninstalling the extension deletes all of it.

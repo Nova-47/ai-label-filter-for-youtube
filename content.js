@@ -114,6 +114,7 @@
 
   chrome.storage.onChanged.addListener((ch, area) => {
     if (area !== 'local' || !ready) return;
+    if (ch.lastRequest && Object.keys(ch).length === 1) return; // see lookup()
     const wasEnabled = settings.enabled;
     if (ch.settings) settings = { ...DEFAULTS, ...ch.settings.newValue };
     if (ch.blocked) blocked = ch.blocked.newValue || {};
@@ -203,7 +204,9 @@
   // through one Web Lock. Locks are per origin, so all youtube.com tabs share
   // it (the page can see it too, hence the long name; an incognito window
   // has its own). The holder keeps it for REQUEST_GAP_MS after the reply, so
-  // requests go out one at a time and at least 1 s apart, browser-wide.
+  // requests go out one at a time and at least 1 s apart, browser-wide. A tab
+  // reloaded mid-request drops the lock at once, so each send is also stored
+  // as `lastRequest` and the next one waits until 1 s after it.
   const REQUEST_LOCK = 'ai-label-filter-for-youtube:request';
 
   // → readResponse() result ({ kind: 'ok', ai, ucid, handle } or kind
@@ -215,10 +218,14 @@
       return await navigator.locks.request(REQUEST_LOCK, async () => {
         if (!alive()) return { kind: 'paused' };
         // The previous holder may have paused requests a moment ago.
-        breaker = (await chrome.storage.local.get('breaker')).breaker || null;
+        const got = await chrome.storage.local.get(['breaker', 'lastRequest']);
+        breaker = got.breaker || null;
         if (A.breakerOpen(breaker) || (want && !want())) return { kind: 'paused' };
+        const wait = A.requestWait(got.lastRequest);
+        if (wait) await sleep(wait);
         let r;
         try {
+          await chrome.storage.local.set({ lastRequest: Date.now() });
           const res = await request(videoId);
           r = A.readResponse(res.status, res.type, await res.text());
         } catch (e) {

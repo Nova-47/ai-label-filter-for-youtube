@@ -45,6 +45,20 @@ test('requests: one at a time and ≥ 1 s apart across tabs', async () => {
   for (let i = 1; i < at.length; i++) assert.ok(at[i] - at[i - 1] >= 1000, `gap ${at[i] - at[i - 1]} ms`);
 });
 
+// Live check: YouTube reloaded the page (&themeRefresh=1) mid-request, the
+// dying document dropped the lock and the new one sent 0.5 s later.
+test('requests: a tab reloaded mid-request still leaves 1 s before the next', async () => {
+  const b = browser({ netMs: 500 });
+  b.store.selfcheck = { at: b.now() };
+  const a = b.tab(watch('aaaaaaaaaaa'));
+  await b.run(50);                                  // a's request is out, the lock held
+  a.close();                                        // reloaded: the lock goes with it
+  b.tab(watch('bbbbbbbbbbb'));
+  await b.run(10000);
+  assert.deepEqual(b.requests.map((r) => r.videoId), ['aaaaaaaaaaa', 'bbbbbbbbbbb']);
+  assert.ok(b.requests[1].at - b.requests[0].at >= 1000, `gap ${b.requests[1].at - b.requests[0].at} ms`);
+});
+
 test('requests: a watch page left before its turn is not looked up', async () => {
   const b = browser();
   b.store.selfcheck = { at: b.now() };
@@ -252,17 +266,18 @@ test('saving: seen-day updates alone write nothing; only changed keys are writte
   const b = browser({ respond: (r) => reply(200, r.videoId === 'dQw4w9WgXcQ' ? fixture('normal-dQw4w9WgXcQ.json') : NO_OWNER) });
   const day = Math.floor(b.now() / 86400000);
   Object.assign(b.store, { selfcheck: { at: b.now() }, verdicts: { aaaaaaaaaaa: [0, day - 3, day - 3] } });
+  const saved = () => b.writes.filter((k) => k !== 'lastRequest'); // request times, see lookup()
   const t = b.tab('https://www.youtube.com/');
   t.addCard('aaaaaaaaaaa');
   await b.run(10000);
-  assert.deepEqual(b.writes, []);                         // the card was seen today: no write for that
+  assert.deepEqual(saved(), []);                          // the card was seen today: no write for that
   t.navigate(watch('bbbbbbbbbbb'));                       // verdict without a channel
   await b.run(10000);
-  assert.deepEqual(b.writes, ['verdicts']);
+  assert.deepEqual(saved(), ['verdicts']);
   assert.equal(b.store.verdicts.aaaaaaaaaaa[2], day);     // the seen day rode along
   t.navigate(watch('dQw4w9WgXcQ'));
   await b.run(10000);
-  assert.deepEqual(b.writes, ['verdicts', 'channels,verdicts']);
+  assert.deepEqual(saved(), ['verdicts', 'channels,verdicts']);
 });
 
 test('saving: a channel changed while its save is being written is saved again', async () => {

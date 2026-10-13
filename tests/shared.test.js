@@ -226,6 +226,16 @@ test('circuit breaker state transitions', () => {
   assert.equal(A.breakerOpen({ until: 'garbage' }, now), false);
 });
 
+test('requestWait: until 1 s after the last send, never longer', () => {
+  const now = 1_700_000_000_000;
+  assert.equal(A.requestWait(undefined, now), 0);
+  assert.equal(A.requestWait('garbage', now), 0);
+  assert.equal(A.requestWait(now - 300, now), 700);
+  assert.equal(A.requestWait(now - 1000, now), 0);
+  assert.equal(A.requestWait(now - 5000, now), 0);
+  assert.equal(A.requestWait(now + 3600 * 1000, now), 1000); // clock set back
+});
+
 test('isBlockedResponse: what trips the breaker', () => {
   assert.equal(A.isBlockedResponse(403, 'basic', '{}'), true);
   assert.equal(A.isBlockedResponse(429, 'basic', ''), true);

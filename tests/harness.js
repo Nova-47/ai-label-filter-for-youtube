@@ -62,20 +62,27 @@ function browser({ latency = 0, setLatency = latency, eventMs = 0, netMs = 100, 
     }),
   };
 
-  // navigator.locks: exclusive, FIFO, `ifAvailable` supported. Shared by all tabs.
+  // navigator.locks: exclusive, FIFO, `ifAvailable` supported. Shared by all
+  // tabs; a closed tab's locks are released (held) or dropped (waiting).
   const held = new Map();
-  const locks = {
+  const next = (q, e) => { if (q[0] !== e) return; q.shift(); if (q.length) q[0].go(); };
+  const locksFor = (owner) => ({
     request(name, opts, cb) {
       if (typeof opts === 'function') { cb = opts; opts = {}; }
       const q = held.get(name) || held.set(name, []).get(name);
       if (opts.ifAvailable && q.length) return Promise.resolve().then(() => cb(null));
       return new Promise((resolve, reject) => {
-        const go = () => Promise.resolve().then(() => cb({ name })).then(resolve, reject)
-          .finally(() => { q.shift(); if (q.length) q[0](); });
-        q.push(go);
-        if (q.length === 1) go();
+        const e = { owner, go: () => Promise.resolve().then(() => cb({ name })).then(resolve, reject).finally(() => next(q, e)) };
+        q.push(e);
+        if (q.length === 1) e.go();
       });
     },
+  });
+  const release = (owner) => {
+    for (const q of held.values()) {
+      if (q[0] && q[0].owner === owner) next(q, q[0]);
+      for (let i = q.length - 1; i > 0; i--) if (q[i].owner === owner) q.splice(i, 1);
+    }
   };
 
   // fetch: logs each request; `inflight` tracks concurrency across tabs.
@@ -115,8 +122,15 @@ function browser({ latency = 0, setLatency = latency, eventMs = 0, netMs = 100, 
     static now() { return now; }
   }
 
+  let tabs = 0;
   function tab(url) {
     const u = new URL(url);
+    // close(): the document is gone, like a reload. Its timers, replies and
+    // storage events no longer reach it; its requests already sent still count.
+    const id = ++tabs;
+    let dead = false;
+    const live = (fn) => (...a) => { if (!dead) fn(...a); };
+    const tabFetch = (url, opts) => new Promise((res, rej) => fetch(url, opts).then(live(res), live(rej)));
     const location = { href: u.href, pathname: u.pathname, search: u.search, origin: u.origin };
     const win = {};
     const docEvents = {};
@@ -150,13 +164,14 @@ function browser({ latency = 0, setLatency = latency, eventMs = 0, netMs = 100, 
       disconnect() {}
     }
     const ctx = vm.createContext({
-      console, structuredClone, setTimeout, clearTimeout, fetch, Date: FakeDate, document, location,
-      navigator: { locks }, AbortSignal, Element: class {},
+      console, structuredClone, setTimeout: (fn, ms) => setTimeout(live(fn), ms), clearTimeout,
+      fetch: tabFetch, Date: FakeDate, document, location,
+      navigator: { locks: locksFor(id) }, AbortSignal, Element: class {},
       IntersectionObserver, MutationObserver,
       window: { addEventListener: (name, fn) => { win[name] = fn; } },
       chrome: {
         runtime: { id: 'test', sendMessage: async () => ({}), onMessage: { addListener() {} } },
-        storage: { local, onChanged: { addListener: (fn) => listeners.push(fn) } },
+        storage: { local, onChanged: { addListener: (fn) => listeners.push(live(fn)) } },
       },
     });
     vm.runInContext('Math.random = () => 0.5;', ctx);
@@ -164,6 +179,7 @@ function browser({ latency = 0, setLatency = latency, eventMs = 0, netMs = 100, 
     vm.runInContext(src('content.js'), ctx);
     return {
       document, html, cards,
+      close() { dead = true; release(id); },
       navigate(to) {
         const n = new URL(to);
         Object.assign(location, { href: n.href, pathname: n.pathname, search: n.search });

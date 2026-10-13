@@ -215,6 +215,12 @@
   const breakerOpen = (b, now = Date.now()) => !!b && typeof b.until === 'number' && now < b.until;
   const breakerTrip = (reason, now = Date.now()) => ({ until: now + BREAKER_MS, reason: String(reason) });
 
+  // Wait before the next request until REQUEST_GAP_MS after the last one was
+  // sent (`last`, from any tab, even one reloaded mid-request, which drops the
+  // lock early). At most the gap, so a clock set back cannot stall requests.
+  const requestWait = (last, now = Date.now()) =>
+    (Number.isFinite(last) ? Math.min(REQUEST_GAP_MS, Math.max(0, last + REQUEST_GAP_MS - now)) : 0);
+
   // Any other refusal (400: mask or clientVersion rejected, 404, 5xx, a reply
   // that isn't JSON) pauses requests too: 15 min, doubling while it keeps
   // happening (`n` in a row), at most 24 h. A good reply clears it. There is
@@ -359,7 +365,7 @@
     REQUEST_GAP_MS, AUTOFLAG_MIN_AI, AISLIST_URL, DAY, QUEUE_MAX,
     isAiBadge, parseNext, isUcid, normalizeHandle, channelFromHref, videoIdFromHref,
     parseList, today, cacheGet, cachePut, cacheOwner, cachePrune, recordVerdict, mergeChannel, isAutoFlagged,
-    channelsPrune, mergeDirty, mergeVerdict, isBlockedResponse, breakerOpen, breakerTrip, backoff, readResponse,
+    channelsPrune, mergeDirty, mergeVerdict, isBlockedResponse, breakerOpen, breakerTrip, requestWait, backoff, readResponse,
     selfcheckDue, selfcheckVerdict, enqueue, takeNext, decide, channelKeys, buildIndex, listKeysFor, listPut, listDrop,
   };
   if (typeof module === 'object' && module.exports) module.exports = api;
