@@ -60,21 +60,7 @@
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   function rebuildIndex() {
-    const h2u = new Map(), u2h = new Map(), flagged = new Set();
-    for (const [ucid, c] of Object.entries(channels)) {
-      if (c.h) { h2u.set(c.h, ucid); u2h.set(ucid, c.h); }
-      if (A.isAutoFlagged(c)) { flagged.add(ucid); if (c.h) flagged.add(c.h); }
-    }
-    const keys = (o) => {
-      const s = new Set();
-      for (const e of Object.values(o)) {
-        if (e.ucid) s.add(e.ucid);
-        if (e.handle) s.add(e.handle);
-        if (e.ucid && e.handle) { h2u.set(e.handle, e.ucid); u2h.set(e.ucid, e.handle); }
-      }
-      return s;
-    };
-    idx = { h2u, u2h, flagged, block: keys(blocked), allow: keys(allowed), list: settings.aislist ? listSet : null };
+    idx = A.buildIndex(channels, blocked, allowed, settings.aislist ? listSet : null);
   }
 
   function applyRoot() {
@@ -445,21 +431,16 @@
   }
 
   // ── Blocklist / allowlist ──────────────────────────────────────────────────
-  // Adding a channel to one list removes it from the other.
+  // Adding a channel to one list removes it from the other (shared.js listPut).
   async function addChannel(listKey, ch) {
-    const keys = A.channelKeys(ch, idx);
-    const ucid = keys.find(A.isUcid) || null;
-    const handle = keys.find((k) => !A.isUcid(k)) || null;
-    if (!ucid && !handle) return;
+    if (!A.channelKeys(ch, idx).length) return;
     const otherKey = listKey === 'blocked' ? 'allowed' : 'blocked';
     try {
       const got = await chrome.storage.local.get([listKey, otherKey]);
-      const list = got[listKey] || {}, other = got[otherKey] || {};
-      for (const [k, e] of Object.entries(other)) {
-        if ((ucid && e.ucid === ucid) || (handle && e.handle === handle)) delete other[k];
-      }
-      list[ucid || '@' + handle] = { ucid, handle, added: Date.now() };
-      await chrome.storage.local.set({ [listKey]: list, [otherKey]: other });
+      await chrome.storage.local.set({
+        [listKey]: A.listPut(got[listKey] || {}, ch, idx, Date.now()),
+        [otherKey]: A.listDrop(got[otherKey] || {}, ch, idx),
+      });
     } catch (e) { log('list update failed', e); }
   }
 

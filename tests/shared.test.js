@@ -355,6 +355,43 @@ test('decide: allowlist > blocklist > label > channel flag > AiSList', () => {
   assert.equal(A.decide(null, { handle: 'someoneelse' }, idx({ block: new Set([U]) })), null);
 });
 
+test('buildIndex: handle/id pairs from channels and list entries, auto-flags, list keys', () => {
+  const U = 'UCp1mMtCnO_11BC4dbGv4BSA', V = 'UCuAXFkgsw1L7xaCfnd5JJOw';
+  const idx = A.buildIndex({ [U]: { h: 'eigi_and_ai', ai: ['a', 'b'] } },
+    { k: { ucid: V, handle: 'rickastleyyt' } }, { '@foo': { ucid: null, handle: 'foo' } }, new Set(['x']));
+  assert.equal(idx.h2u.get('eigi_and_ai'), U);
+  assert.equal(idx.u2h.get(V), 'rickastleyyt');                 // learnt from a list entry
+  assert.deepEqual([...idx.flagged].sort(), [U, 'eigi_and_ai'].sort());
+  assert.deepEqual([...idx.block].sort(), [V, 'rickastleyyt'].sort());
+  assert.deepEqual([...idx.allow], ['foo']);
+  assert.deepEqual([...idx.list], ['x']);
+  assert.equal(A.buildIndex(undefined, undefined, undefined).list, null);
+});
+
+// Review L2: allowed from a home card (handle only), later from a search
+// card (UC id) used to leave two entries, and removing one kept it allowed.
+test('listPut / listDrop: one key per channel; Remove removes every alias', () => {
+  const U = 'UCp1mMtCnO_11BC4dbGv4BSA';
+  const allowed = {};
+  A.listPut(allowed, { handle: 'eigi_and_ai' }, A.buildIndex({}, {}, allowed), 1);
+  assert.deepEqual(allowed, { '@eigi_and_ai': { ucid: null, handle: 'eigi_and_ai', added: 1 } });
+  const learnt = { [U]: { h: 'eigi_and_ai', ai: [] } };      // a `next` reply taught us the pair
+  A.listPut(allowed, { ucid: U }, A.buildIndex(learnt, {}, allowed), 2);
+  assert.deepEqual(allowed, { [U]: { ucid: U, handle: 'eigi_and_ai', added: 2 } });
+  // Old data with two entries for one channel: Remove by either drops both.
+  const dup = { '@eigi_and_ai': { ucid: null, handle: 'eigi_and_ai' }, [U]: { ucid: U, handle: null } };
+  assert.deepEqual(A.listDrop({ ...dup }, dup['@eigi_and_ai'], A.buildIndex(learnt, {}, dup)), {});
+  assert.deepEqual(A.listDrop({ ...dup }, dup[U], A.buildIndex(learnt, {}, dup)), {});
+  // Without a known pair the two stay separate, and other channels are untouched.
+  const other = { '@foo': { ucid: null, handle: 'foo' } };
+  assert.deepEqual(A.listDrop({ ...dup, ...other }, dup[U], A.buildIndex({}, {}, {})), { '@eigi_and_ai': dup['@eigi_and_ai'], ...other });
+  // Known by handle only, then the same handle again: still one entry, UC id kept.
+  const blocked = { [U]: { ucid: U, handle: 'eigi_and_ai', added: 1 } };
+  A.listPut(blocked, { handle: 'eigi_and_ai' }, A.buildIndex({}, blocked, {}), 3);
+  assert.deepEqual(blocked, { [U]: { ucid: U, handle: 'eigi_and_ai', added: 3 } });
+  assert.deepEqual(A.listPut({}, null, A.buildIndex({}, {}, {}), 1), {});
+});
+
 test('mask covers the two paths and nothing from the sidebar', () => {
   assert.match(A.NEXT_FIELDS, /videoPrimaryInfoRenderer\.badges/);
   assert.match(A.NEXT_FIELDS, /browseEndpoint\(browseId,canonicalBaseUrl\)/);

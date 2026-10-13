@@ -53,7 +53,7 @@ function renderChannels(listKey, list) {
   const ul = $(listKey);
   ul.replaceChildren();
   const entries = Object.entries(list || {}).sort((a, b) => (b[1].added || 0) - (a[1].added || 0));
-  for (const [key, e] of entries) {
+  for (const [, e] of entries) {
     const li = document.createElement('li');
     const a = document.createElement('a');
     a.href = e.handle ? `https://www.youtube.com/@${encodeURIComponent(e.handle)}`
@@ -64,11 +64,11 @@ function renderChannels(listKey, list) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.textContent = 'Remove';
+    // Removes every entry for this channel (handle or UC id), see shared.js.
     btn.addEventListener('click', async () => {
-      const got = await chrome.storage.local.get(listKey);
-      const cur = got[listKey] || {};
-      delete cur[key];
-      await chrome.storage.local.set({ [listKey]: cur });
+      const got = await chrome.storage.local.get(['channels', 'blocked', 'allowed']);
+      const idx = A.buildIndex(got.channels, got.blocked, got.allowed);
+      await chrome.storage.local.set({ [listKey]: A.listDrop(got[listKey] || {}, e, idx) });
     });
     li.append(a, btn);
     ul.append(li);

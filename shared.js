@@ -299,6 +299,54 @@
     return [ucid, handle].filter(Boolean);
   }
 
+  // The lookup sets decide() needs: handle <-> UC id pairs learnt from `next`
+  // replies and list entries, auto-flagged channels, and the list keys.
+  function buildIndex(channels, blocked, allowed, list = null) {
+    const h2u = new Map(), u2h = new Map(), flagged = new Set();
+    for (const [ucid, c] of Object.entries(channels || {})) {
+      if (c.h) { h2u.set(c.h, ucid); u2h.set(ucid, c.h); }
+      if (isAutoFlagged(c)) { flagged.add(ucid); if (c.h) flagged.add(c.h); }
+    }
+    const keys = (o) => {
+      const s = new Set();
+      for (const e of Object.values(o || {})) {
+        if (e.ucid) s.add(e.ucid);
+        if (e.handle) s.add(e.handle);
+        if (e.ucid && e.handle) { h2u.set(e.handle, e.ucid); u2h.set(e.ucid, e.handle); }
+      }
+      return s;
+    };
+    return { h2u, u2h, flagged, block: keys(blocked), allow: keys(allowed), list };
+  }
+
+  // ── Block / allow lists ────────────────────────────────────────────────────
+  // { key: { ucid, handle, added } }, key = the UC id if known, else "@handle".
+  // Keys of every entry for the same channel as `ch`: same UC id, same
+  // handle, or linked through a known handle <-> id pair.
+  function listKeysFor(list, ch, idx) {
+    const want = new Set(channelKeys(ch, idx));
+    return Object.keys(list).filter((k) => channelKeys(list[k], idx).some((x) => want.has(x)));
+  }
+
+  // Put a channel under one key, replacing every entry for it, so it never
+  // sits under two keys and "Remove" (listDrop) really removes it.
+  function listPut(list, ch, idx, added) {
+    const keys = channelKeys(ch, idx);
+    let ucid = keys.find(isUcid) || null, handle = keys.find((k) => !isUcid(k)) || null;
+    for (const k of listKeysFor(list, ch, idx)) {
+      ucid = ucid || list[k].ucid || null;
+      handle = handle || list[k].handle || null;
+      delete list[k];
+    }
+    if (ucid || handle) list[ucid || '@' + handle] = { ucid, handle, added };
+    return list;
+  }
+
+  function listDrop(list, ch, idx) {
+    for (const k of listKeysFor(list, ch, idx)) delete list[k];
+    return list;
+  }
+
   const api = {
     NEXT_FIELDS, CANARY_IDS, TTL_CLEAN_DAYS, TTL_AI_DAYS, CACHE_MAX, CHANNELS_MAX, BREAKER_MS, RETRY_MS, REQUEST_GAP_MS,
     AUTOFLAG_MIN_AI, AISLIST_URL, DAY, QUEUE_MAX,
@@ -306,6 +354,7 @@
     parseList, today, cacheGet, cachePut, cacheOwner, cachePrune, recordVerdict, mergeChannel, isAutoFlagged,
     channelsPrune, mergeDirty, mergeVerdict,
     isBlockedResponse, breakerOpen, breakerTrip, backoff, readResponse, selfcheckDue, selfcheckVerdict, enqueue, takeNext, decide, channelKeys,
+    buildIndex, listKeysFor, listPut, listDrop,
   };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.AILF = api;
