@@ -41,7 +41,8 @@ async function doRefresh(force) {
       if (!entries.length) throw new Error('no entries found');
       Object.assign(next, { etag: res.headers.get('ETag'), fetchedAt: Date.now(), count: entries.length });
       // One newline-joined string (~0.5 MB) instead of an array: compact, and
-      // well under chrome.storage.local's 10 MB quota, so no unlimitedStorage.
+      // well under chrome.storage.local's quota (10 MB; 5 MB before Chrome
+      // 114), so no unlimitedStorage.
       await chrome.storage.local.set({ aislistData: entries.join('\n') });
     }
   } catch (e) {
