@@ -33,7 +33,7 @@
   const SELFCHECK_STALE_MS = 5 * 60000; // a self-check unfinished this long was cut off
   const AUTOFLAG_MIN_AI = 2;     // labelled videos needed to flag a channel (implied by
                                  // the two below today; kept so the rule reads in full)
-  const AUTOFLAG_MIN_CHECKED = 3; // checked videos needed to flag a channel
+  const AUTOFLAG_MIN_CHECKED = 5; // checked videos needed to flag a channel
   const AUTOFLAG_MIN_RATIO = 0.6; // and this share of its checked videos labelled
   const CHANNEL_WINDOW = 20;     // most recent checked videos kept per channel
 
@@ -164,51 +164,79 @@
   }
 
   // ── Channel aggregates ─────────────────────────────────────────────────────
-  // channels: { ucid: { h: handle, v: [[videoId, 1 labelled | 0 clean], …], d: last verdict day } }.
-  // `v` is a window of the last CHANNEL_WINDOW distinct videos checked from
-  // the channel, oldest first. A video checked again is updated in place and
-  // moved to the end, so it counts once and a changed verdict replaces the old
-  // one; past the window the oldest video drops out. The rule is computed over
-  // this window only, so a channel that changes course is judged by what it
-  // posts now, and labelled and clean videos are sampled the same way.
-  // Entries saved in an older format (no `v`) have no usable checked count:
-  // they are not flagged, and the next verdict for the channel starts a new
-  // window (their old video ids are dropped).
-  // Size: 5,000 channels (CHANNELS_MAX) with full windows and a 16-character
-  // handle are 2.14 MB as JSON (measured with JSON.stringify in node), and the
-  // whole `channels` object is rewritten on each save.
-  const isWindow = (c) => !!c && Array.isArray(c.v);
+  // channels: { ucid: { h: handle, w: ['videoId:time1', …], d: last verdict day } }.
+  // `w` is a window of the last CHANNEL_WINDOW distinct videos checked from
+  // the channel, oldest first. Each entry is one string: the video id, ':',
+  // the check time in whole seconds since 1970 written in base 36, and a last
+  // character 1 (labelled) or 0 (clean). The time orders entries across tabs:
+  // a merge keeps, per video, the entry checked last, then the newest
+  // CHANNEL_WINDOW of them. Seconds are fine enough, as one tab records
+  // entries in order and a tie only matters for two different videos checked
+  // in the same second right at the window's edge. A video checked again is
+  // moved to the newest place with its latest verdict, so it counts once;
+  // past the window the oldest video drops out. The rule uses the last 20
+  // distinct checked videos only, so a channel that changes course is judged
+  // by what it posts now.
+  // Entries in any other format (older `ai` lists, the earlier `ai`/`ok` and
+  // `v` windows without times) have no usable window: they are not flagged,
+  // and the next verdict for the channel starts a new one.
+  // Size: 5,000 channels (CHANNELS_MAX) with full windows of 11-character
+  // ids and a 16-character handle are 2.54 MB as JSON (measured with
+  // JSON.stringify in node; with [id, verdict, seconds] arrays it was
+  // 3.24 MB), and the whole `channels` object is rewritten on each save.
+  const isWindow = (c) => !!c && Array.isArray(c.w);
 
-  function recordVerdict(channels, ucid, handle, videoId, ai, day) {
+  // 'id:time1' → { id, t, ai }, or null if malformed.
+  function parseEntry(e) {
+    if (typeof e !== 'string') return null;
+    const i = e.lastIndexOf(':'), last = e.slice(-1), t = parseInt(e.slice(i + 1, -1), 36);
+    if (i < 1 || (last !== '0' && last !== '1') || !Number.isFinite(t)) return null;
+    return { id: e.slice(0, i), t, ai: last === '1' };
+  }
+  const makeEntry = (id, t, ai) => `${id}:${t.toString(36)}${ai ? 1 : 0}`;
+
+  // `now` in ms. The time is at least the channel's newest entry's, so a
+  // clock set back cannot put a new verdict behind older ones.
+  function recordVerdict(channels, ucid, handle, videoId, ai, day, now = Date.now()) {
     if (!isUcid(ucid)) return channels;
     let c = channels[ucid];
-    if (!isWindow(c)) c = channels[ucid] = { h: (c && c.h) || null, v: [] };
+    if (!isWindow(c)) c = channels[ucid] = { h: (c && c.h) || null, w: [] };
     if (handle) c.h = handle;
     c.d = day;
-    c.v = c.v.filter((e) => Array.isArray(e) && e[0] !== videoId);
-    c.v.push([videoId, ai ? 1 : 0]);
-    if (c.v.length > CHANNEL_WINDOW) c.v = c.v.slice(-CHANNEL_WINDOW);
+    const kept = c.w.map(parseEntry).filter((e) => e && e.id !== videoId);
+    const t = Math.max(Math.floor(now / 1000), ...kept.map((e) => e.t));
+    c.w = [...kept.map((e) => makeEntry(e.id, e.t, e.ai)), makeEntry(videoId, t, ai)].slice(-CHANNEL_WINDOW);
     return channels;
   }
 
-  // Two tabs may have updated the same channel. `b` is this tab's copy: its
-  // window is laid on top of the stored one (`a`), so b's verdict wins for a
-  // video both have, and the result is cut back to the window. An old-format
-  // side loses to a window, as recordVerdict would have replaced it.
+  // Two tabs may have updated the same channel; `b` is this tab's copy. Per
+  // video the entry with the later time wins (b on a tie), then the newest
+  // CHANNEL_WINDOW entries are kept, oldest first. So a stale tab cannot undo
+  // a newer verdict, and two tabs that each added a video keep both. An
+  // old-format side loses to a window, as recordVerdict would have replaced it.
   function mergeChannel(a, b) {
     if (!a || !b) return a || b;
     const d = Math.max(a.d || 0, b.d || 0), h = b.h || a.h || null;
     if (isWindow(a) !== isWindow(b)) return { ...(isWindow(a) ? a : b), h, d };
     if (!isWindow(a)) return { h, ai: [...new Set([...(a.ai || []), ...(b.ai || [])])].slice(0, 5), d };
-    const mine = new Set(b.v.map((e) => e[0]));
-    const v = [...a.v.filter((e) => !mine.has(e[0])), ...b.v].slice(-CHANNEL_WINDOW);
-    return { h, v, d };
+    const best = new Map();
+    for (const e of [...a.w.map(parseEntry), ...b.w.map(parseEntry)]) {
+      if (!e) continue;
+      const cur = best.get(e.id);
+      if (!cur || e.t >= cur.t) { best.delete(e.id); best.set(e.id, e); }
+    }
+    const w = [...best.values()].sort((x, y) => x.t - y.t) // stable: b after a on a tie
+      .slice(-CHANNEL_WINDOW).map((e) => makeEntry(e.id, e.t, e.ai));
+    return { h, w, d };
   }
 
   // Labelled and checked counts over a channel's window, or null for an
   // old-format entry.
-  const channelCounts = (c) => (isWindow(c)
-    ? { ai: c.v.filter((e) => Array.isArray(e) && e[1] === 1).length, checked: c.v.length } : null);
+  function channelCounts(c) {
+    if (!isWindow(c)) return null;
+    const es = c.w.map(parseEntry).filter(Boolean);
+    return { ai: es.filter((e) => e.ai).length, checked: es.length };
+  }
 
   function isAutoFlagged(c) {
     const n = channelCounts(c);
@@ -216,8 +244,8 @@
       && n.ai / n.checked >= AUTOFLAG_MIN_RATIO;
   }
 
-  // Past `max` entries, drop down to 80%: channels without a labelled video
-  // first, then the rest, least recently seen first. Auto-flagged channels
+  // Past `max` entries, drop down to 80%: fewest labelled videos in the
+  // window first (old-format entries count as 0), then least recently seen. Auto-flagged channels
   // and the ones in `keep` (block/allow list keys) always stay.
   function channelsPrune(channels, keep, max = CHANNELS_MAX) {
     const ids = Object.keys(channels);
@@ -406,7 +434,7 @@
     NEXT_FIELDS, CANARY_IDS, TTL_CLEAN_DAYS, TTL_AI_DAYS, CACHE_MAX, CHANNELS_MAX, BREAKER_MS, RETRY_MS,
     REQUEST_GAP_MS, SELFCHECK_STALE_MS, AUTOFLAG_MIN_AI, AUTOFLAG_MIN_CHECKED, AUTOFLAG_MIN_RATIO, CHANNEL_WINDOW, AISLIST_URL, DAY, QUEUE_MAX,
     isAiBadge, parseNext, isUcid, normalizeHandle, channelFromHref, videoIdFromHref,
-    parseList, today, cacheGet, cachePut, cacheOwner, cachePrune, recordVerdict, mergeChannel, channelCounts, isAutoFlagged,
+    parseList, today, cacheGet, cachePut, cacheOwner, cachePrune, recordVerdict, parseEntry, makeEntry, mergeChannel, channelCounts, isAutoFlagged,
     channelsPrune, mergeDirty, mergeVerdict, isBlockedResponse, breakerOpen, breakerTrip, requestWait, backoff, readResponse,
     selfcheckDue, selfcheckVerdict, enqueue, takeNext, decide, channelKeys, buildIndex, listKeysFor, listPut, listDrop,
   };

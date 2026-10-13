@@ -168,52 +168,71 @@ test('cache: prune drops expired first, then least recently seen, down to 80%', 
   assert.deepEqual(Object.keys(small), ['a']); // under the cap: untouched
 });
 
-test('channel aggregates: a window of recent distinct videos, re-checks never inflate', () => {
+// Video ids and verdicts in a channel's window, oldest first.
+const ids = (c) => c.w.map((e) => A.parseEntry(e).id);
+const pairs = (c) => c.w.map((e) => { const p = A.parseEntry(e); return [p.id, p.ai ? 1 : 0]; });
+const T = 1_790_000_000_000; // ms
+const win = (list) => list.map(([id, ai, s]) => A.makeEntry(id, s, ai));
+
+test('window entries: id, base-36 seconds and verdict in one string', () => {
+  assert.equal(A.makeEntry('dQw4w9WgXcQ', 1790000000, true), 'dQw4w9WgXcQ:tlpwu81');
+  assert.deepEqual(A.parseEntry('dQw4w9WgXcQ:tlpwu81'), { id: 'dQw4w9WgXcQ', t: 1790000000, ai: true });
+  assert.deepEqual(A.parseEntry(A.makeEntry('a-_b', 5, false)), { id: 'a-_b', t: 5, ai: false });
+  for (const bad of [null, 1, ['a', 1], 'nocolon1', ':tlpwu81', 'a:tlpwu82', 'a:1', 'a:!!1']) assert.equal(A.parseEntry(bad), null, String(bad));
+});
+
+test('channel aggregates: a window of recent distinct videos, re-checks do not inflate', () => {
   const ch = {};
   const U = 'UCp1mMtCnO_11BC4dbGv4BSA';
-  A.recordVerdict(ch, U, 'eigi_and_ai', 'vid00000001', true, 100);
-  A.recordVerdict(ch, U, 'eigi_and_ai', 'vid00000001', true, 100); // same video again
+  A.recordVerdict(ch, U, 'eigi_and_ai', 'vid00000001', true, 100, T);
+  A.recordVerdict(ch, U, 'eigi_and_ai', 'vid00000001', true, 100, T); // same video again
   assert.equal(A.isAutoFlagged(ch[U]), false);
-  A.recordVerdict(ch, U, null, 'vid00000002', false, 101);
-  A.recordVerdict(ch, U, null, 'vid00000002', false, 101);         // clean re-check
+  A.recordVerdict(ch, U, null, 'vid00000002', false, 101, T + 1000);
+  A.recordVerdict(ch, U, null, 'vid00000002', false, 101, T + 2000); // clean re-check
   assert.deepEqual(A.channelCounts(ch[U]), { ai: 1, checked: 2 });
-  assert.equal(A.isAutoFlagged(ch[U]), false);
-  A.recordVerdict(ch, U, null, 'vid00000003', true, 102);
-  assert.equal(A.isAutoFlagged(ch[U]), true);                       // 2 of 3
-  assert.deepEqual(ch[U], { h: 'eigi_and_ai', v: [['vid00000001', 1], ['vid00000002', 0], ['vid00000003', 1]], d: 102 });
-  A.recordVerdict(ch, U, null, 'vid00000001', true, 103);           // re-check: moves to the end, not added
-  assert.deepEqual(ch[U].v.map((e) => e[0]), ['vid00000002', 'vid00000003', 'vid00000001']);
-  A.recordVerdict(ch, U, null, 'vid00000003', false, 103);          // verdict changed: updated in place
+  A.recordVerdict(ch, U, null, 'vid00000003', true, 102, T + 3000);
+  assert.deepEqual(ch[U], { h: 'eigi_and_ai', w: win([['vid00000001', 1, T / 1000], ['vid00000002', 0, T / 1000 + 2], ['vid00000003', 1, T / 1000 + 3]]), d: 102 });
+  A.recordVerdict(ch, U, null, 'vid00000001', true, 103, T + 4000); // re-check: moves to the end, not added
+  assert.deepEqual(ids(ch[U]), ['vid00000002', 'vid00000003', 'vid00000001']);
+  A.recordVerdict(ch, U, null, 'vid00000003', false, 103, T + 5000); // verdict changed: moved to newest
   assert.deepEqual(A.channelCounts(ch[U]), { ai: 1, checked: 3 });
-  assert.deepEqual(ch[U].v.at(-1), ['vid00000003', 0]);
+  assert.deepEqual(pairs(ch[U]).at(-1), ['vid00000003', 0]);
+  // A clock set back still records the new verdict as the newest.
+  A.recordVerdict(ch, U, null, 'vid00000004', true, 103, T - 99000);
+  assert.deepEqual(A.parseEntry(ch[U].w.at(-1)), { id: 'vid00000004', t: T / 1000 + 5, ai: true });
   A.recordVerdict(ch, 'not-a-ucid', 'x', 'vid00000004', true, 102);
   assert.equal(Object.keys(ch).length, 1);
   assert.equal(A.isAutoFlagged(undefined), false);
-  assert.equal(A.isAutoFlagged({ v: 'corrupt' }), false);
-  assert.equal(A.isAutoFlagged({ v: [null, 'x', ['a', 1], ['b', 1]] }), false); // 2 of 4
+  assert.equal(A.isAutoFlagged({ w: 'corrupt' }), false);
+  assert.equal(A.isAutoFlagged({ w: [null, 'x', ['a', 1], ...win([['a', 1, 1], ['b', 1, 2], ['c', 1, 3], ['d', 1, 4]])] }), false); // 4 of 4 valid
   // The window keeps the last CHANNEL_WINDOW videos; the oldest drops out.
   assert.equal(A.CHANNEL_WINDOW, 20);
   const big = {};
   for (let i = 0; i < 25; i++) A.recordVerdict(big, U, null, 'v' + i, false, 1);
-  assert.equal(big[U].v.length, A.CHANNEL_WINDOW);
-  assert.deepEqual([big[U].v[0][0], big[U].v.at(-1)[0]], ['v5', 'v24']);
+  assert.equal(big[U].w.length, A.CHANNEL_WINDOW);
+  assert.deepEqual([ids(big[U])[0], ids(big[U]).at(-1)], ['v5', 'v24']);
 });
 
-test('auto-flag rule: checked >= 3, labelled >= 2 and labelled / checked >= 0.6', () => {
-  assert.equal(A.AUTOFLAG_MIN_CHECKED, 3);
+test('auto-flag rule: checked >= 5, labelled >= 2 and labelled / checked >= 0.6', () => {
+  assert.equal(A.AUTOFLAG_MIN_CHECKED, 5);
   assert.equal(A.AUTOFLAG_MIN_AI, 2);
   assert.equal(A.AUTOFLAG_MIN_RATIO, 0.6);
   const U = 'UCp1mMtCnO_11BC4dbGv4BSA';
   const cases = [
     // [labelled, checked, flagged]
     [2, 2, false],
-    [3, 3, true],
+    [2, 3, false],
+    [3, 3, false],
+    [4, 4, false],
     [2, 4, false],
+    [4, 5, true],
     [3, 5, true],
+    [2, 5, false],
+    [5, 5, true],
     [5, 12, false],
     [1, 1, false],
-    [2, 3, true],
     [3, 6, false],
+    [4, 6, true],
     [6, 10, true],
     [12, 20, true],
     [11, 20, false],
@@ -269,68 +288,111 @@ test('auto-flag: re-checking the same labelled video does not reach the bar', ()
   for (let i = 0; i < 5; i++) A.recordVerdict(ch, U, null, 'same', true, i);
   assert.deepEqual(A.channelCounts(ch[U]), { ai: 1, checked: 1 });
   assert.equal(A.isAutoFlagged(ch[U]), false);
-  A.recordVerdict(ch, U, null, 'other', true, 6);
-  for (let i = 0; i < 5; i++) A.recordVerdict(ch, U, null, 'other', true, 6 + i);
-  assert.deepEqual(A.channelCounts(ch[U]), { ai: 2, checked: 2 });
-  assert.equal(A.isAutoFlagged(ch[U]), false);                       // 2 of 2: too few checked
-  // A clean video re-checked many times still counts once: 2 of 3.
+  for (const id of ['b', 'c']) for (let i = 0; i < 5; i++) A.recordVerdict(ch, U, null, id, true, 6 + i);
+  assert.deepEqual(A.channelCounts(ch[U]), { ai: 3, checked: 3 });
+  assert.equal(A.isAutoFlagged(ch[U]), false);                       // 3 of 3: too few checked
+  // A clean video re-checked many times still counts once: 3 of 4.
   for (let i = 0; i < 5; i++) A.recordVerdict(ch, U, null, 'clean', false, 11 + i);
-  assert.deepEqual(A.channelCounts(ch[U]), { ai: 2, checked: 3 });
-  assert.equal(A.isAutoFlagged(ch[U]), true);
-  // Re-checks never push other videos out of the window.
+  assert.deepEqual(A.channelCounts(ch[U]), { ai: 3, checked: 4 });
+  assert.equal(A.isAutoFlagged(ch[U]), false);
+  A.recordVerdict(ch, U, null, 'clean2', false, 16);
+  assert.deepEqual(A.channelCounts(ch[U]), { ai: 3, checked: 5 });
+  assert.equal(A.isAutoFlagged(ch[U]), true);                        // 3 of 5
+  // Re-checks do not push other videos out of the window.
   const w = {};
   for (let i = 0; i < 20; i++) A.recordVerdict(w, U, null, 'v' + i, i < 12, 1);
   for (let i = 0; i < 50; i++) A.recordVerdict(w, U, null, 'v19', false, 2);
   assert.deepEqual(A.channelCounts(w[U]), { ai: 12, checked: 20 });
 });
 
-test('auto-flag: old entries without a window are not flagged and start over', () => {
+test('auto-flag: entries in any older format are not flagged and start over', () => {
   const U = 'UCp1mMtCnO_11BC4dbGv4BSA';
-  for (const old of [{ h: 'x', ai: ['a', 'b', 'c', 'd', 'e'], d: 5 }, { h: 'x', ai: ['a', 'b', 'c'], ok: [], d: 5 }]) {
+  const olds = [
+    { h: 'x', ai: ['a', 'b', 'c', 'd', 'e', 'f'], d: 5 },                       // first format
+    { h: 'x', ai: ['a', 'b', 'c', 'd', 'e', 'f'], ok: [], d: 5 },               // 10 + 10
+    { h: 'x', v: [['a', 1], ['b', 1], ['c', 1], ['d', 1], ['e', 1], ['f', 1]], d: 5 }, // window without times
+  ];
+  for (const old of olds) {
     assert.equal(A.channelCounts(old), null);
     assert.equal(A.isAutoFlagged(old), false);
     assert.equal(A.buildIndex({ [U]: old }, {}, {}).flagged.size, 0);
     const ch = { [U]: clone(old) };
-    A.recordVerdict(ch, U, null, 'f', false, 6);                     // next verdict: new window
-    assert.deepEqual(ch[U], { h: 'x', v: [['f', 0]], d: 6 });
-    A.recordVerdict(ch, U, null, 'g', true, 7);
-    A.recordVerdict(ch, U, null, 'h', true, 7);
-    assert.equal(A.isAutoFlagged(ch[U]), true);                      // 2 of 3
+    A.recordVerdict(ch, U, null, 'f', false, 6, T);                   // next verdict: new window
+    assert.deepEqual(ch[U], { h: 'x', w: win([['f', 0, T / 1000]]), d: 6 });
+    for (const id of ['g', 'h', 'i', 'j']) A.recordVerdict(ch, U, null, id, true, 7);
+    assert.equal(A.isAutoFlagged(ch[U]), true);                      // 4 of 5
   }
 });
 
-test('mergeChannel: this tab\'s window on top; window beats old format', () => {
+test('mergeChannel: newest entry per video, then the newest 20; window beats old format', () => {
   const merged = A.mergeChannel(
-    { h: null, v: [['a', 1], ['c', 0], ['x', 0]], d: 7 },
-    { h: 'h', v: [['b', 1], ['a', 1], ['x', 1]], d: 5 });
-  assert.deepEqual(merged, { h: 'h', v: [['c', 0], ['b', 1], ['a', 1], ['x', 1]], d: 7 });
-  assert.equal(A.isAutoFlagged(merged), true);                       // 3 of 4
+    { h: null, w: win([['a', 1, 10], ['c', 0, 11], ['x', 0, 30]]), d: 7 },
+    { h: 'h', w: win([['b', 1, 12], ['a', 1, 13], ['x', 1, 20]]), d: 5 });
+  // x: the stored copy checked it later (30), so this tab's older verdict loses.
+  assert.deepEqual(merged, { h: 'h', w: win([['c', 0, 11], ['b', 1, 12], ['a', 1, 13], ['x', 0, 30]]), d: 7 });
+  const tie = A.mergeChannel({ w: win([['a', 0, 5]]) }, { w: win([['a', 1, 5]]) });
+  assert.deepEqual(pairs(tie), [['a', 1]]);                          // same second: this tab wins
   const long = A.mergeChannel(
-    { h: null, v: Array.from({ length: 20 }, (_, i) => ['s' + i, 0]) },
-    { h: null, v: Array.from({ length: 5 }, (_, i) => ['m' + i, 1]) });
-  assert.equal(long.v.length, A.CHANNEL_WINDOW);
-  assert.deepEqual([long.v[0][0], long.v.at(-1)[0]], ['s5', 'm4']);
-  const mixed = A.mergeChannel({ h: 'h', ai: ['a', 'b', 'c'], d: 9 }, { h: null, v: [['z', 0]], d: 4 });
-  assert.deepEqual(mixed, { h: 'h', v: [['z', 0]], d: 9 });
+    { h: null, w: win(Array.from({ length: 20 }, (_, i) => ['s' + i, 0, 100 + i])) },
+    { h: null, w: win(Array.from({ length: 5 }, (_, i) => ['m' + i, 1, 200 + i])) });
+  assert.equal(long.w.length, A.CHANNEL_WINDOW);
+  assert.deepEqual([ids(long)[0], ids(long).at(-1)], ['s5', 'm4']);
+  const mixed = A.mergeChannel({ h: 'h', ai: ['a', 'b', 'c'], d: 9 }, { h: null, w: win([['z', 0, 1]]), d: 4 });
+  assert.deepEqual(mixed, { h: 'h', w: win([['z', 0, 1]]), d: 9 });
+  const vOld = A.mergeChannel({ h: 'h', v: [['a', 1]], d: 9 }, { h: null, w: win([['z', 0, 1]]), d: 4 });
+  assert.deepEqual(vOld.w, win([['z', 0, 1]]));
   assert.deepEqual(A.mergeChannel({ h: null, ai: ['a'], d: 7 }, { h: 'x', ai: ['b', 'a'], d: 5 }), { h: 'x', ai: ['a', 'b'], d: 7 });
   assert.equal(A.mergeChannel(undefined, merged), merged);
 });
 
-test('channelsPrune: bounded; flagged and listed channels stay', () => {
+test('mergeChannel: two tabs each add a video to a full window, both survive', () => {
+  const U = 'UCp1mMtCnO_11BC4dbGv4BSA';
+  const base = {};
+  for (let i = 0; i < 20; i++) A.recordVerdict(base, U, null, 'old' + i, false, 1, T + i * 1000);
+  const tab1 = clone(base), tab2 = clone(base);
+  A.recordVerdict(tab1, U, null, 'new1', true, 2, T + 60000);
+  A.recordVerdict(tab2, U, null, 'new2', true, 2, T + 61000);
+  // Tab 1 saves first; tab 2's save merges onto what tab 1 stored, and the
+  // other way round.
+  for (const [stored, mine] of [[tab1[U], tab2[U]], [tab2[U], tab1[U]]]) {
+    const m = A.mergeChannel(stored, mine);
+    assert.equal(m.w.length, 20);
+    assert.deepEqual(ids(m).slice(-2), ['new1', 'new2']);
+    assert.deepEqual(ids(m).slice(0, 2), ['old2', 'old3']);          // the two oldest drop out
+    assert.deepEqual(A.channelCounts(m), { ai: 2, checked: 20 });
+  }
+  // A stale tab still holding an old clean verdict for a video cannot undo
+  // the newer labelled verdict another tab stored.
+  const fresh = clone(base), stale = clone(base);
+  A.recordVerdict(fresh, U, null, 'old5', true, 3, T + 90000);
+  A.recordVerdict(stale, U, null, 'other', false, 2, T + 70000);
+  const m = A.mergeChannel(fresh[U], stale[U]);
+  assert.deepEqual(pairs(m).find((p) => p[0] === 'old5'), ['old5', 1]);
+  assert.deepEqual(ids(m).slice(-2), ['other', 'old5']);
+});
+
+test('channelsPrune: bounded; flagged and listed channels stay; fewest labelled in the window go first', () => {
   const ch = {};
   const id = (i) => 'UC' + String(i).padStart(22, '0');
-  for (let i = 0; i < 10; i++) ch[id(i)] = { h: null, v: [], d: 100 + i };
-  ch[id(0)].v = [['x1', 1], ['x2', 1], ['x4', 1]];   // auto-flagged, oldest
-  ch[id(1)].v = [['x3', 1]];                         // one labelled video
+  for (let i = 0; i < 10; i++) ch[id(i)] = { h: null, w: [], d: 100 + i };
+  ch[id(0)].w = win([['x1', 1, 1], ['x2', 1, 2], ['x4', 1, 3], ['x5', 1, 4], ['x6', 0, 5]]); // auto-flagged, oldest
+  ch[id(1)].w = win([['x3', 1, 1]]);                 // one labelled video
   const keep = new Set([id(2)]);                     // on a block/allow list
   A.channelsPrune(ch, keep, 10);
   assert.equal(Object.keys(ch).length, 10);          // at the cap: untouched
-  ch[id(10)] = { h: null, v: [], d: 200 };
+  ch[id(10)] = { h: null, w: [], d: 200 };
   A.channelsPrune(ch, keep, 10);
   assert.deepEqual(Object.keys(ch).sort(), [0, 1, 2, 6, 7, 8, 9, 10].map(id)); // 80%: the 3 oldest plain ones go
-  const tight = { [id(0)]: { v: [['a', 1], ['b', 1], ['e', 1]] }, [id(1)]: { v: [['c', 1]], d: 1 }, [id(2)]: { v: [], d: 9 } };
-  A.channelsPrune(tight, new Set(), 1);
-  assert.deepEqual(Object.keys(tight), [id(0)]);     // plain first, then one-label; flagged stays
+  // Sorted by labelled videos in the window, not window length: c (1 labelled,
+  // 5 checked) goes before e (2 labelled, 2 checked), old formats count as 0.
+  const tight = {
+    [id(0)]: { w: win([['a', 1, 1], ['b', 1, 2], ['e', 1, 3], ['f', 1, 4], ['g', 1, 5]]) },
+    [id(1)]: { w: win([['c', 1, 1], ['c2', 0, 2], ['c3', 0, 3], ['c4', 0, 4], ['c5', 0, 5]]), d: 1 },
+    [id(2)]: { w: win([['e1', 1, 1], ['e2', 1, 2]]), d: 0 },
+    [id(3)]: { v: [['o1', 1], ['o2', 1], ['o3', 1]], d: 9 },
+  };
+  A.channelsPrune(tight, new Set(), 3);
+  assert.deepEqual(Object.keys(tight).sort(), [id(0), id(2)]);
 });
 
 test('mergeDirty: a save keeps the other tab\'s entries and lays its own on top', () => {
@@ -339,8 +401,8 @@ test('mergeDirty: a save keeps the other tab\'s entries and lays its own on top'
   assert.deepEqual(A.mergeDirty(stored, mine, ['b', 'c', 'gone'], A.mergeVerdict), {
     a: [0, 10, 10], b: [1, 10, 12, 'UCx', 0], c: [0, 11, 11], // b: the newer check wins; d: not dirty
   });
-  const chans = A.mergeDirty({ U1: { h: 'x', v: [['v1', 1], ['c1', 0]], d: 3 } }, { U1: { h: null, v: [['v2', 1]], d: 4 } }, ['U1'], A.mergeChannel);
-  assert.deepEqual(chans, { U1: { h: 'x', v: [['v1', 1], ['c1', 0], ['v2', 1]], d: 4 } });
+  const chans = A.mergeDirty({ U1: { h: 'x', w: win([['v1', 1, 1], ['c1', 0, 2]]), d: 3 } }, { U1: { h: null, w: win([['v2', 1, 3]]), d: 4 } }, ['U1'], A.mergeChannel);
+  assert.deepEqual(chans, { U1: { h: 'x', w: win([['v1', 1, 1], ['c1', 0, 2], ['v2', 1, 3]]), d: 4 } });
 });
 
 test('circuit breaker state transitions', () => {
@@ -509,7 +571,7 @@ test('decide: allowlist > blocklist > label > channel flag > AiSList', () => {
 
 test('buildIndex: handle/id pairs from channels and list entries, auto-flags, list keys', () => {
   const U = 'UCp1mMtCnO_11BC4dbGv4BSA', V = 'UCuAXFkgsw1L7xaCfnd5JJOw';
-  const idx = A.buildIndex({ [U]: { h: 'eigi_and_ai', v: [['a', 1], ['b', 1], ['c', 0]] } },
+  const idx = A.buildIndex({ [U]: { h: 'eigi_and_ai', w: ['a:11', 'b:21', 'c:31', 'd:41', 'e:50'] } },
     { k: { ucid: V, handle: 'rickastleyyt' } }, { '@foo': { ucid: null, handle: 'foo' } }, new Set(['x']));
   assert.equal(idx.h2u.get('eigi_and_ai'), U);
   assert.equal(idx.u2h.get(V), 'rickastleyyt');                 // learnt from a list entry

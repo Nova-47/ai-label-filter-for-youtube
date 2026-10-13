@@ -7,6 +7,9 @@ const { browser, fixture, reply } = require('./harness');
 const LABELLED = 'yHG-pivADos';
 const U = 'UCp1mMtCnO_11BC4dbGv4BSA';
 const watch = (id) => 'https://www.youtube.com/watch?v=' + id;
+const A = require('../shared.js');
+// Video ids and verdicts in a stored channel window, oldest first.
+const pairs = (c) => c.w.map((e) => { const p = A.parseEntry(e); return [p.id, p.ai ? 1 : 0]; });
 
 test('watch page: one masked lookup → banner → verdict and channel saved', async () => {
   const b = browser({ respond: () => reply(200, fixture('labelled-yHG-pivADos.json')) });
@@ -22,7 +25,9 @@ test('watch page: one masked lookup → banner → verdict and channel saved', a
   const v = b.store.verdicts[LABELLED];
   assert.deepEqual([v[0], v[3], v[4]], [1, U, 'eigi_and_ai']);
   assert.equal(b.store.channels[U].h, 'eigi_and_ai');
-  assert.deepEqual(b.store.channels[U].v, [[LABELLED, 1]]);
+  const at = A.parseEntry(b.store.channels[U].w[0]).t;       // check time, whole seconds
+  assert.ok(at >= Math.floor(b.now() / 1000) - 5 && at <= b.now() / 1000, String(at));
+  assert.deepEqual(pairs(b.store.channels[U]), [[LABELLED, 1]]);
   t.navigate(watch(LABELLED) + '&t=5');                   // cached now: no new request
   await b.run(5000);
   assert.equal(b.requests.length, 1);
@@ -259,7 +264,7 @@ test('saving: two tabs saving at once both keep their verdicts', async () => {
   await b.run(30000);
   assert.deepEqual(Object.keys(b.store.verdicts).sort(), ['dQw4w9WgXcQ', 'nG8aoy69iIo']);
   assert.deepEqual(Object.keys(b.store.channels).sort(), ['UC8F8MJyWevV2EzzLxZnSRLg', 'UCuAXFkgsw1L7xaCfnd5JJOw']);
-  assert.deepEqual(Object.values(b.store.channels).flatMap((c) => c.v).map(String).sort(), ['dQw4w9WgXcQ,0', 'nG8aoy69iIo,0']); // clean verdicts count as checked
+  assert.deepEqual(Object.values(b.store.channels).flatMap(pairs).map(String).sort(), ['dQw4w9WgXcQ,0', 'nG8aoy69iIo,0']); // clean verdicts count as checked
 });
 
 test('saving: seen-day updates alone write nothing; only changed keys are written', async () => {
@@ -288,7 +293,7 @@ test('saving: a channel changed while its save is being written is saved again',
   await b.run(3500);                                    // the first save is being written
   t.navigate(watch('uxZZg64CUDM'));                     // same channel, labelled too
   await b.run(20000);
-  assert.deepEqual(b.store.channels[U].v, [[LABELLED, 1], ['uxZZg64CUDM', 1]]);
+  assert.deepEqual(pairs(b.store.channels[U]), [[LABELLED, 1], ['uxZZg64CUDM', 1]]);
 });
 
 test('card lookups: a card that scrolls away while waiting for the lock is skipped', async () => {
@@ -314,14 +319,14 @@ test('card lookups: a card that scrolls away while waiting for the lock is skipp
 test('auto-flagged channel: marked "channel" with chip, and the CSS never hides it', async () => {
   const b = browser();
   const U = 'UCMMmm45yro8eyHzadofoG4A';
-  Object.assign(b.store, { selfcheck: { at: b.now() }, channels: { [U]: { h: 'foreverharmony_official', v: [['v1', 1], ['v2', 1], ['v3', 1], ['v4', 0]] } } });
+  Object.assign(b.store, { selfcheck: { at: b.now() }, channels: { [U]: { h: 'foreverharmony_official', w: ['v1:a1', 'v2:b1', 'v3:c1', 'v4:d1', 'v5:e0'] } } });
   const t = b.tab('https://www.youtube.com/');
   const flagged = t.addCard('aaaaaaaaaaa', '/@ForeverHarmony_Official');
   const plain = t.addCard('bbbbbbbbbbb', '/@someoneelse');
   await b.run(1000);
   assert.equal(flagged.dataset.ailf, 'channel');
   assert.equal(flagged.children[0].className, 'ailf-chip');
-  assert.equal(flagged.children[0].firstChild.textContent, 'Channel: 3 of 4 checked videos AI-labelled');
+  assert.equal(flagged.children[0].firstChild.textContent, 'Channel: 4 of last 5 checked videos AI-labelled');
   assert.equal(flagged.children[0].lastChild.hidden, false);       // "Allow channel"
   assert.equal('ailf' in plain.dataset, false);
   const css = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'content.css'), 'utf8');

@@ -39,8 +39,9 @@ html.ailf-on [data-ailf="channel"] > .ailf-chip {
   top: 6px;
   left: 6px;
   z-index: 10;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 2px 8px;
   max-width: calc(100% - 12px);
   padding: 4px 8px;
   border-radius: 6px;
