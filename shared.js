@@ -15,9 +15,10 @@
       'videoPrimaryInfoRenderer.badges.metadataBadgeRenderer(style,icon,label),' +
       'videoSecondaryInfoRenderer.owner.videoOwnerRenderer.navigationEndpoint.browseEndpoint(browseId,canonicalBaseUrl))';
 
-  // Videos that carried YouTube's "AI" badge when checked on 2026-10-13.
-  // The daily self-check expects at least one of them to still be detected.
-  const CANARY_IDS = ['yHG-pivADos', 'e9D14ALX3s0'];
+  // Videos that carried YouTube's "AI" badge when checked on 2026-10-13, from
+  // two channels (@eigi_and_ai, @foreverharmony_official). The daily
+  // self-check expects at least one of them to still be detected.
+  const CANARY_IDS = ['yHG-pivADos', 'Xpg-JIuJ_cU'];
 
   // Cache lifetimes and size. A "clean" verdict expires sooner because YouTube
   // may label a video later; AI labels are rarely removed.
@@ -208,6 +209,25 @@
     try { return { kind: 'ok', ...parseNext(JSON.parse(body)) }; } catch { return { kind: 'bad', why: 'not JSON' }; }
   }
 
+  // ── Self-check ─────────────────────────────────────────────────────────────
+  const selfcheckDue = (sc, b, now = Date.now()) =>
+    !breakerOpen(b, now) && !(sc && typeof sc.at === 'number' && now >= sc.at && now - sc.at < DAY);
+
+  // `results`: lookup() results for the canaries, in order (the check stops at
+  // the first labelled one or the first failure). Verdicts:
+  //   ok       a canary still shows the label
+  //   error    YouTube refused the request or sent an unusable reply (warn)
+  //   unknown  offline, paused or blocked: no news (the popup shows pauses)
+  //   broken   every canary is there and none is labelled (warn)
+  //   missing  a canary is gone (removed or private) and the others are not
+  //            labelled: can't tell, no warning; time to pick new canaries
+  function selfcheckVerdict(results) {
+    if (results.some((r) => r.kind === 'ok' && r.ai === true)) return 'ok';
+    if (results.some((r) => r.kind === 'bad')) return 'error';
+    if (!results.length || results.some((r) => r.kind !== 'ok')) return 'unknown';
+    return results.length >= 2 && results.every((r) => r.ai === false) ? 'broken' : 'missing';
+  }
+
   // ── Card lookup queue (Tier 2) ─────────────────────────────────────────────
   // Newest first: what is on screen now came into view last. A video seen
   // again moves to the top; past QUEUE_MAX the oldest entries go.
@@ -259,7 +279,7 @@
     AUTOFLAG_MIN_AI, AISLIST_URL, DAY, QUEUE_MAX,
     isAiBadge, parseNext, isUcid, normalizeHandle, channelFromHref, videoIdFromHref,
     parseList, today, cacheGet, cachePut, cacheOwner, cachePrune, recordVerdict, mergeChannel, isAutoFlagged,
-    isBlockedResponse, breakerOpen, breakerTrip, backoff, readResponse, enqueue, takeNext, decide, channelKeys,
+    isBlockedResponse, breakerOpen, breakerTrip, backoff, readResponse, selfcheckDue, selfcheckVerdict, enqueue, takeNext, decide, channelKeys,
   };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.AILF = api;

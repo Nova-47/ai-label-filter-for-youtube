@@ -88,10 +88,16 @@ async function render() {
   const paused = A.breakerOpen(got.breaker);
   $('paused').hidden = !paused;
   if (paused) {
-    $('paused').textContent = `YouTube pushed back (${got.breaker.reason}), so all requests are paused until ` +
-      `${new Date(got.breaker.until).toLocaleString()}. Labels already seen still apply.`;
+    const b = got.breaker;
+    $('paused').textContent = (b.n ? `YouTube refused a request (${b.reason}), so requests are paused until `
+      : `YouTube pushed back (${b.reason}), so all requests are paused until `) +
+      `${new Date(b.until).toLocaleString()}. Labels already seen still apply.`;
   }
-  $('broken').hidden = !(got.selfcheck && got.selfcheck.ok === false);
+  const check = got.selfcheck && got.selfcheck.state;
+  $('broken').hidden = check !== 'broken' && check !== 'error';
+  $('broken-why').textContent = check === 'error'
+    ? 'YouTube refused the daily label check, so labels may not be read right now.'
+    : 'Label detection may be broken (YouTube may have changed something).';
 
   $('onboarding').hidden = settings.onboarded || settings.aislist;
   const meta = got.aislistMeta || {};

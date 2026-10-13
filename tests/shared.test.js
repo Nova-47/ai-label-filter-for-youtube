@@ -237,6 +237,54 @@ test('backoff: 15 min, doubling, at most 24 h', () => {
   assert.equal(A.backoff(A.breakerTrip('HTTP 429', now), 'HTTP 400', now).n, 1); // a block has no count
 });
 
+test('selfcheckVerdict: table', () => {
+  const r = (status, body) => A.readResponse(status, 'basic', body);
+  const LAB = JSON.stringify(fixture('labelled-yHG-pivADos.json'));
+  const UNL = JSON.stringify(fixture('normal-dQw4w9WgXcQ.json'));
+  const net = { kind: 'network' };
+  const cases = [
+    [[r(200, LAB)], 'ok'],
+    [[r(200, UNL), r(200, LAB)], 'ok'],
+    [[r(200, '{}'), r(200, LAB)], 'ok'],
+    [[r(400, '{}')], 'error'],
+    [[r(404, '')], 'error'],
+    [[r(500, '')], 'error'],
+    [[r(503, '')], 'error'],
+    [[r(200, '<html>consent</html>')], 'error'],
+    [[r(200, UNL), r(400, '{}')], 'error'],
+    [[r(200, UNL), r(200, UNL)], 'broken'],
+    [[r(200, '{}'), r(200, '{}')], 'missing'],      // both gone (removed/private)
+    [[r(200, UNL), r(200, '{}')], 'missing'],
+    [[r(200, '{}'), r(200, UNL)], 'missing'],
+    [[r(200, UNL)], 'missing'],                     // one unlabelled canary alone never says broken
+    [[net], 'unknown'],
+    [[r(200, UNL), net], 'unknown'],
+    [[r(429, '')], 'unknown'],                      // blocked: the popup shows the pause
+    [[{ kind: 'paused' }], 'unknown'],
+    [[], 'unknown'],
+  ];
+  for (const [results, want] of cases) {
+    assert.equal(A.selfcheckVerdict(results), want, JSON.stringify(results.map((x) => x.kind + ':' + x.ai)));
+  }
+});
+
+test('selfcheckDue: once a day, not while paused', () => {
+  const now = 1_700_000_000_000;
+  assert.equal(A.selfcheckDue(undefined, null, now), true);
+  assert.equal(A.selfcheckDue({ at: now - A.DAY + 1 }, null, now), false);
+  assert.equal(A.selfcheckDue({ at: now - A.DAY }, null, now), true);
+  assert.equal(A.selfcheckDue({ at: now + 3600000 }, null, now), true);   // clock went back
+  assert.equal(A.selfcheckDue({ state: 'ok' }, null, now), true);
+  assert.equal(A.selfcheckDue(undefined, A.breakerTrip('HTTP 429', now), now), false);
+});
+
+test('canaries: two, from different channels', () => {
+  assert.equal(A.CANARY_IDS.length, 2);
+  assert.notEqual(A.parseNext(fixture('labelled-yHG-pivADos.json')).ucid,
+    A.parseNext(fixture('labelled-Xpg-JIuJ_cU.json')).ucid);
+  assert.deepEqual(A.CANARY_IDS, ['yHG-pivADos', 'Xpg-JIuJ_cU']);
+});
+
 test('enqueue / takeNext: newest first, unwanted entries dropped, capped', () => {
   const q = [];
   for (const v of ['a', 'b', 'c', 'd']) A.enqueue(q, v);

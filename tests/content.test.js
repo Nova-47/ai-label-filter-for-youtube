@@ -137,3 +137,35 @@ test('card lookups: nothing while the tab is in the background', async () => {
   await b.run(10000);
   assert.equal(b.requests.length, 3);
 });
+
+// Review E3: three tabs restored at once used to run the check three times.
+test('self-check: one run per day across tabs; first labelled canary ends it', async () => {
+  const b = browser({ respond: (r) => reply(200, fixture(r.videoId === LABELLED ? 'labelled-yHG-pivADos.json' : 'normal-dQw4w9WgXcQ.json')) });
+  for (let i = 0; i < 3; i++) b.tab('https://www.youtube.com/');
+  await b.run(10000);
+  assert.deepEqual(b.requests.map((r) => r.videoId), [LABELLED]);
+  assert.equal(b.store.selfcheck.state, 'ok');
+  assert.equal('channels' in b.store, false);           // canaries never count towards flags
+  b.tab('https://www.youtube.com/');                    // same day: skipped
+  await b.run(10000);
+  assert.equal(b.requests.length, 1);
+  await b.run(24 * 3600000);
+  b.tab('https://www.youtube.com/');                    // next day: runs again
+  await b.run(10000);
+  assert.equal(b.requests.length, 2);
+});
+
+// Review E4 and M2: a refused request used to end as "unknown" (no warning),
+// a reply without the video as "broken" (false warning).
+test('self-check: HTTP 400 warns, canaries gone do not', async () => {
+  const run = async (respond) => {
+    const b = browser({ respond });
+    b.tab('https://www.youtube.com/');
+    await b.run(10000);
+    return [b.store.selfcheck.state, b.requests.length];
+  };
+  assert.deepEqual(await run(() => reply(400, '{"error":{}}')), ['error', 1]);
+  assert.deepEqual(await run(() => reply(200, '{}')), ['missing', 2]);
+  assert.deepEqual(await run(() => reply(200, fixture('normal-dQw4w9WgXcQ.json'))), ['broken', 2]);
+  assert.deepEqual(await run(() => new Error('offline')), ['unknown', 1]);
+});

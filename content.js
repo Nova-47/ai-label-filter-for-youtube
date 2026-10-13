@@ -473,20 +473,24 @@
 
   // ── Self-check: is label detection still working? ──────────────────────────
   // Once a day per browser (not per tab), only while requests are allowed.
+  // The lock makes check-and-claim atomic: of several tabs opening at once,
+  // one runs it and the others skip. Verdicts: see shared.js.
+  const SELFCHECK_LOCK = 'ai-label-filter-for-youtube:selfcheck';
   async function maybeSelfCheck() {
     try {
-      const { selfcheck } = await chrome.storage.local.get('selfcheck');
-      if (A.breakerOpen(breaker) || (selfcheck && Date.now() - selfcheck.at < A.DAY)) return;
-      // Claim today's run first so other tabs skip it.
-      await chrome.storage.local.set({ selfcheck: { at: Date.now(), ok: selfcheck ? selfcheck.ok : null } });
-      let ok = null;
-      for (const id of A.CANARY_IDS) {
-        const info = await lookup(id, { record: false });
-        if (info.kind !== 'ok') { ok = null; break; }
-        ok = info.ai === true;
-        if (ok) break;
-      }
-      await chrome.storage.local.set({ selfcheck: { at: Date.now(), ok } });
+      await navigator.locks.request(SELFCHECK_LOCK, { ifAvailable: true }, async (held) => {
+        if (!held) return;
+        const { selfcheck } = await chrome.storage.local.get('selfcheck');
+        if (!A.selfcheckDue(selfcheck, breaker)) return;
+        await chrome.storage.local.set({ selfcheck: { ...selfcheck, at: Date.now() } }); // claim today's run
+        const results = [];
+        for (const id of A.CANARY_IDS) {
+          const r = await lookup(id, { record: false });
+          results.push(r);
+          if (r.kind !== 'ok' || r.ai === true) break;
+        }
+        await chrome.storage.local.set({ selfcheck: { at: Date.now(), state: A.selfcheckVerdict(results) } });
+      });
     } catch (e) { log('self-check failed', e); }
   }
 
