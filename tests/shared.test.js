@@ -13,7 +13,10 @@ const AI_BADGE = { metadataBadgeRenderer: { icon: { iconType: 'INFO' }, style: '
 
 test('parseNext: labelled video', () => {
   assert.deepEqual(A.parseNext(fixture('labelled-yHG-pivADos.json')), {
-    ai: true, ucid: 'UCp1mMtCnO_11BC4dbGv4BSA', handle: 'eigi_and_ai', disclosure: 'Made with AI',
+    ai: true, ucid: 'UCp1mMtCnO_11BC4dbGv4BSA', handle: 'eigi_and_ai',
+  });
+  assert.deepEqual(A.parseNext(fixture('labelled-Xpg-JIuJ_cU.json')), {
+    ai: true, ucid: 'UCMMmm45yro8eyHzadofoG4A', handle: 'foreverharmony_official',
   });
 });
 
@@ -22,13 +25,13 @@ test('parseNext: auto-dubbed video has a SIMPLE badge and "How this was made", b
   const badge = json.contents.twoColumnWatchNextResults.results.results.contents[0].videoPrimaryInfoRenderer.badges[0];
   assert.equal(badge.metadataBadgeRenderer.style, 'BADGE_STYLE_TYPE_SIMPLE'); // the trap this test guards
   assert.deepEqual(A.parseNext(json), {
-    ai: false, ucid: 'UC8F8MJyWevV2EzzLxZnSRLg', handle: 'obaydfox', disclosure: 'Auto-dubbed',
+    ai: false, ucid: 'UC8F8MJyWevV2EzzLxZnSRLg', handle: 'obaydfox',
   });
 });
 
 test('parseNext: normal video', () => {
   assert.deepEqual(A.parseNext(fixture('normal-dQw4w9WgXcQ.json')), {
-    ai: false, ucid: 'UCuAXFkgsw1L7xaCfnd5JJOw', handle: 'rickastleyyt', disclosure: null,
+    ai: false, ucid: 'UCuAXFkgsw1L7xaCfnd5JJOw', handle: 'rickastleyyt',
   });
 });
 
@@ -36,9 +39,7 @@ test('parseNext: "How this was made: Made with AI" alone never counts', () => {
   const json = fixture('normal-dQw4w9WgXcQ.json');
   json.engagementPanels[4].engagementPanelSectionListRenderer.content.structuredDescriptionContentRenderer.items[2] =
     { howThisWasMadeSectionViewModel: { bodyHeader: { content: 'Made with AI' } } };
-  const r = A.parseNext(json);
-  assert.equal(r.disclosure, 'Made with AI');
-  assert.equal(r.ai, false);
+  assert.equal(A.parseNext(json).ai, false);
 });
 
 test('parseNext: an AI badge in secondaryResults (sidebar) does not leak into the verdict', () => {
@@ -178,13 +179,12 @@ test('channel aggregates and auto-flag (2+ labelled videos)', () => {
   A.recordVerdict(ch, U, null, 'vid00000003', true);
   assert.equal(A.isAutoFlagged(ch[U]), true);
   assert.equal(ch[U].h, 'eigi_and_ai');
-  assert.equal(ch[U].n, 4);
   A.recordVerdict(ch, 'not-a-ucid', 'x', 'vid00000004', true);
   assert.equal(Object.keys(ch).length, 1);
   assert.equal(A.isAutoFlagged(undefined), false);
   assert.equal(A.isAutoFlagged({ ai: 'corrupt' }), false);
-  const merged = A.mergeChannel({ h: null, ai: ['a'], n: 3 }, { h: 'x', ai: ['b', 'a'], n: 2 });
-  assert.deepEqual(merged, { h: 'x', ai: ['a', 'b'], n: 3 });
+  const merged = A.mergeChannel({ h: null, ai: ['a'] }, { h: 'x', ai: ['b', 'a'] });
+  assert.deepEqual(merged, { h: 'x', ai: ['a', 'b'] });
   assert.equal(A.isAutoFlagged(merged), true);
 });
 
@@ -231,11 +231,10 @@ test('decide: allowlist > blocklist > label > channel flag > AiSList', () => {
   assert.equal(A.decide(null, { handle: 'someoneelse' }, idx({ block: new Set([U]) })), null);
 });
 
-test('mask covers the three paths and nothing from the sidebar', () => {
+test('mask covers the two paths and nothing from the sidebar', () => {
   assert.match(A.NEXT_FIELDS, /videoPrimaryInfoRenderer\.badges/);
   assert.match(A.NEXT_FIELDS, /browseEndpoint\(browseId,canonicalBaseUrl\)/);
-  assert.match(A.NEXT_FIELDS, /howThisWasMadeSectionViewModel\.bodyHeader/);
-  assert.doesNotMatch(A.NEXT_FIELDS, /secondaryResults/);
+  assert.doesNotMatch(A.NEXT_FIELDS, /secondaryResults|engagementPanels/);
   const open = (A.NEXT_FIELDS.match(/\(/g) || []).length;
   assert.equal(open, (A.NEXT_FIELDS.match(/\)/g) || []).length);
 });

@@ -7,16 +7,13 @@
   const DAY = 86400000;
 
   // ── InnerTube `next` request ───────────────────────────────────────────────
-  // Partial-response mask: the full response is ~400 KB, this is ~0.9 KB.
-  // Only three things are requested: the badges under the title, the owner's
-  // channel id + @handle, and the "How this was made" header (kept for
-  // display/debugging only; it never decides anything, see parseNext).
+  // Partial-response mask: the full response is ~400 KB, this is ~0.4 KB.
+  // Only two things are requested: the badges under the title and the
+  // owner's channel id + @handle.
   const NEXT_FIELDS =
     'contents.twoColumnWatchNextResults.results.results.contents(' +
       'videoPrimaryInfoRenderer.badges.metadataBadgeRenderer(style,icon,label),' +
-      'videoSecondaryInfoRenderer.owner.videoOwnerRenderer.navigationEndpoint.browseEndpoint(browseId,canonicalBaseUrl)),' +
-    'engagementPanels.engagementPanelSectionListRenderer.content.structuredDescriptionContentRenderer' +
-      '.items.howThisWasMadeSectionViewModel.bodyHeader';
+      'videoSecondaryInfoRenderer.owner.videoOwnerRenderer.navigationEndpoint.browseEndpoint(browseId,canonicalBaseUrl))';
 
   // Videos that carried YouTube's "AI" badge when checked on 2026-10-13.
   // The daily self-check expects at least one of them to still be detected.
@@ -49,12 +46,12 @@
 
   // Read only the scoped paths, so the same function is safe on a full
   // (unmasked) response: secondaryResults (the sidebar) is never visited.
-  // Returns { ai: true | false | null, ucid, handle, disclosure }.
+  // Returns { ai: true | false | null, ucid, handle }.
   // ai === null means "can't tell" (no videoPrimaryInfoRenderer at all, e.g. a
   // removed video or a changed response shape); callers treat it as unknown
   // and never cache it.
   function parseNext(json) {
-    const out = { ai: null, ucid: null, handle: null, disclosure: null };
+    const out = { ai: null, ucid: null, handle: null };
     const contents = json && json.contents && json.contents.twoColumnWatchNextResults &&
       json.contents.twoColumnWatchNextResults.results &&
       json.contents.twoColumnWatchNextResults.results.results &&
@@ -70,16 +67,6 @@
       if (be) {
         if (isUcid(be.browseId)) out.ucid = be.browseId;
         out.handle = normalizeHandle(be.canonicalBaseUrl);
-      }
-    }
-    for (const p of arr(json && json.engagementPanels)) {
-      const items = p && p.engagementPanelSectionListRenderer &&
-        p.engagementPanelSectionListRenderer.content &&
-        p.engagementPanelSectionListRenderer.content.structuredDescriptionContentRenderer &&
-        p.engagementPanelSectionListRenderer.content.structuredDescriptionContentRenderer.items;
-      for (const it of arr(items)) {
-        const h = it && it.howThisWasMadeSectionViewModel && it.howThisWasMadeSectionViewModel.bodyHeader;
-        if (h && typeof h.content === 'string') out.disclosure = h.content;
       }
     }
     return out;
@@ -168,13 +155,12 @@
   }
 
   // ── Channel aggregates ─────────────────────────────────────────────────────
-  // channels: { ucid: { h: handle, ai: [videoIds], n: total verdicts } }.
+  // channels: { ucid: { h: handle, ai: [videoIds] } }.
   // Labelled video ids are kept (max 5) so the same video is never counted twice.
   function recordVerdict(channels, ucid, handle, videoId, ai) {
     if (!isUcid(ucid)) return channels;
-    const c = channels[ucid] || (channels[ucid] = { h: null, ai: [], n: 0 });
+    const c = channels[ucid] || (channels[ucid] = { h: null, ai: [] });
     if (handle) c.h = handle;
-    c.n++;
     if (ai && !c.ai.includes(videoId) && c.ai.length < 5) c.ai.push(videoId);
     return channels;
   }
@@ -182,7 +168,7 @@
   // Two tabs may have updated the same channel; keep the union of both.
   function mergeChannel(a, b) {
     if (!a || !b) return a || b;
-    return { h: b.h || a.h, ai: [...new Set([...a.ai, ...b.ai])].slice(0, 5), n: Math.max(a.n, b.n) };
+    return { h: b.h || a.h, ai: [...new Set([...a.ai, ...b.ai])].slice(0, 5) };
   }
 
   const isAutoFlagged = (c) => !!c && Array.isArray(c.ai) && c.ai.length >= AUTOFLAG_MIN_AI;
