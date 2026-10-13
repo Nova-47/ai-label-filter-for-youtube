@@ -1,0 +1,7 @@
+.claude/
+*.crx
+*.pem
+*.zip
+dist/
+store/raw/
+node_modules/
