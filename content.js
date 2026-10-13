@@ -223,6 +223,9 @@
   // Pause YouTube requests in every tab, or with null clear an expired pause.
   async function pause(b) {
     breaker = b;
+    // Not needed for safety (pump and takeNext check again), but it does
+    // drop this tab's waiting cards: without it they are looked up when the
+    // pause ends, if still on screen; with it, when they next come into view.
     if (b) queue.length = 0;
     try {
       await (b ? chrome.storage.local.set({ breaker: b }) : chrome.storage.local.remove('breaker'));
