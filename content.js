@@ -506,7 +506,8 @@
   }
 
   const mo = new MutationObserver(scheduleScan);
-  mo.observe(document.documentElement, { childList: true, subtree: true });
+  // href too: a reused card can get a new video by its link alone.
+  mo.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['href'] });
   window.addEventListener('yt-navigate-finish', () => { checkNav(); scheduleScan(); });
   document.addEventListener('visibilitychange', pump);
   load();

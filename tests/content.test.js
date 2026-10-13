@@ -224,3 +224,21 @@ test('auto-flagged channel: marked "channel" with chip, and the CSS never hides 
   assert.match(hide[0], /\[data-ailf\]:not\(\[data-ailf="channel"\]\)/);
   assert.match(css, /html\.ailf-on \[data-ailf="channel"\] > \.ailf-chip/);
 });
+
+// Review L3: a card reused for another video by changing only its link's
+// href was not re-checked until some other DOM change.
+test('a reused card whose link alone changes is checked again', async () => {
+  const b = browser();
+  const day = Math.floor(b.now() / 86400000);
+  Object.assign(b.store, { selfcheck: { at: b.now() }, verdicts: { aiaiaiaiaia: [1, day, day, 0, 0] } });
+  const t = b.tab('https://www.youtube.com/');
+  assert.deepEqual(JSON.parse(JSON.stringify(t.mo.options)), { childList: true, subtree: true, attributes: true, attributeFilter: ['href'] });
+  const card = t.addCard('aiaiaiaiaia');
+  await b.run(1000);
+  assert.equal(card.dataset.ailf, 'label');
+  card.link.getAttribute = () => '/watch?v=cleancleanc';         // href-only change
+  t.mutate();                                                       // what the attribute record triggers
+  await b.run(1000);
+  assert.equal('ailf' in card.dataset, false);
+  assert.equal(card.dataset.ailfVid, 'cleancleanc');
+});
