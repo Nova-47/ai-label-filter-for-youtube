@@ -45,7 +45,7 @@
   let channels = {};     // per-channel aggregates, see shared.js recordVerdict
   let blocked = {};      // { key: { ucid, handle, added } }
   let allowed = {};
-  let breaker = null;    // { until, reason } while YouTube requests are paused
+  let breaker = null;    // { until, reason, n? }: requests paused (shared.js breakerTrip, backoff)
   let listSet = null;    // AiSList entries, only while the subscription is on
   let idx = null;        // lookup sets for shared.js decide()
   let ready = false;
@@ -129,13 +129,13 @@
       await navigator.locks.request(SAVE_LOCK, async () => {
         const got = await chrome.storage.local.get(['verdicts', 'channels']);
         const v = new Map(dirty.verdicts), c = new Map(dirty.channels);
+        if (!v.size && !c.size) return;
         const out = {};
         if (v.size) out.verdicts = A.cachePrune(A.mergeDirty(got.verdicts || {}, cache, v.keys(), A.mergeVerdict), A.today());
         if (c.size) {
           const keep = new Set([...Object.values(blocked), ...Object.values(allowed)].flatMap((e) => A.channelKeys(e, idx)));
           out.channels = A.channelsPrune(A.mergeDirty(got.channels || {}, channels, c.keys(), A.mergeChannel), keep);
         }
-        if (!v.size && !c.size) return;
         await chrome.storage.local.set(out);
         for (const [k, saved] of [['verdicts', v], ['channels', c]]) {
           for (const [id, n] of saved) if (dirty[k].get(id) === n) dirty[k].delete(id);
@@ -402,7 +402,7 @@
     let ai = A.cacheGet(cache, vid, A.today());
     let owner = A.cacheOwner(cache, vid);
     if (ai === null) {
-      const r = await lookup(vid);
+      const r = await lookup(vid, { want: () => currentVideoId() === vid }); // still on it?
       if (r.kind !== 'ok') return;
       ai = r.ai;
       owner = (r.ucid || r.handle) ? r : null;

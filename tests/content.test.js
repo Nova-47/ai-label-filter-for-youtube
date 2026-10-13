@@ -28,22 +28,33 @@ test('watch page: one masked lookup → banner → verdict and channel saved', a
   assert.equal(b.requests.length, 1);
 });
 
-// Several videos per tab, two tabs, all at once (review E7).
+// Review E7: two tabs with card lookups on, each with its own queue.
 test('requests: one at a time and ≥ 1 s apart across tabs', async () => {
   const b = browser();
-  b.store.selfcheck = { at: b.now() };
-  const ids = (p) => [1, 2, 3, 4].map((i) => (p + i).padEnd(11, 'x'));
-  const tabs = [b.tab(watch(ids('a')[0])), b.tab(watch(ids('b')[0]))];
-  for (const i of [1, 2, 3]) {
-    await b.run(150);
-    tabs[0].navigate(watch(ids('a')[i]));
-    tabs[1].navigate(watch(ids('b')[i]));
-  }
-  await b.run(20000);
-  assert.equal(b.requests.length, 8);
+  Object.assign(b.store, { selfcheck: { at: b.now() }, settings: { lookups: true } });
+  const tabs = ['a', 'b'].map((p) => {
+    const t = b.tab('https://www.youtube.com/');
+    return { t, cards: [1, 2, 3, 4, 5].map((i) => t.addCard((p + i).padEnd(11, 'x'))) };
+  });
+  await b.run(1000);
+  for (const { t, cards } of tabs) t.intersect(cards, true);
+  await b.run(30000);
+  assert.equal(b.requests.length, 10);
   assert.equal(b.maxInflight, 1);
   const at = b.requests.map((r) => r.at);
   for (let i = 1; i < at.length; i++) assert.ok(at[i] - at[i - 1] >= 1000, `gap ${at[i] - at[i - 1]} ms`);
+});
+
+test('requests: a watch page left before its turn is not looked up', async () => {
+  const b = browser();
+  b.store.selfcheck = { at: b.now() };
+  const t = b.tab(watch('aaaaaaaaaaa'));
+  await b.run(50);                                  // a's request is out, the lock held
+  t.navigate(watch('bbbbbbbbbbb'));                 // b waits for the lock...
+  await b.run(50);
+  t.navigate(watch('ccccccccccc'));                 // ...and is left before its turn
+  await b.run(10000);
+  assert.deepEqual(b.requests.map((r) => r.videoId), ['aaaaaaaaaaa', 'ccccccccccc']);
 });
 
 test('requests: a block in one tab stops the request already queued in another', async () => {
