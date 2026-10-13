@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Label Filter for YouTube</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 320px;
+      background: #0f0f0f;
+      color: #f1f1f1;
+      font: 13px/1.45 'Roboto', Arial, sans-serif;
+      padding: 16px;
+    }
+
+    a {
+      color: #3ea6ff;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    header img {
+      width: 28px;
+      height: 28px;
+    }
+
+    header h1 {
+      flex: 1;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    section {
+      background: #1a1a1a;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+
+    h2 {
+      font-size: 12px;
+      font-weight: 600;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 8px;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .row + .row {
+      margin-top: 8px;
+    }
+
+    .muted {
+      color: #888;
+      font-size: 12px;
+    }
+
+    .alert {
+      background: #3a2a10;
+      color: #ffcf7a;
+    }
+
+    .alert.bad {
+      background: #3a1414;
+      color: #ff9b9b;
+    }
+
+    button {
+      background: #2a2a2a;
+      color: #f1f1f1;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #333;
+    }
+
+    button.primary {
+      background: #3d82f0;
+      border-color: #3d82f0;
+    }
+
+    button.link {
+      background: none;
+      border: none;
+      color: #3ea6ff;
+      padding: 0;
+    }
+
+    ul {
+      list-style: none;
+    }
+
+    li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 3px 0;
+    }
+
+    li a {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Toggle switch (same as Windowed Fullscreen for YouTube) */
+    .toggle {
+      position: relative;
+      flex-shrink: 0;
+      width: 40px;
+      height: 22px;
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: #444;
+      border-radius: 22px;
+      transition: background 0.2s;
+    }
+
+    .slider::before {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      left: 3px;
+      top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+
+    .toggle input:checked + .slider {
+      background: #3d82f0;
+    }
+
+    .toggle input:checked + .slider::before {
+      transform: translateX(18px);
+    }
+
+    .toggle input:focus-visible + .slider {
+      outline: 2px solid #3ea6ff;
+    }
+
+    .seg {
+      display: flex;
+      gap: 12px;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="icons/icon48.png" width="28" height="28" alt="" />
+    <h1>AI Label Filter</h1>
+    <label class="toggle" title="Turn filtering on or off">
+      <input type="checkbox" id="enabled" aria-label="Filtering on" />
+      <span class="slider"></span>
+    </label>
+  </header>
+
+  <section id="paused" class="alert" hidden></section>
+  <section id="broken" class="alert bad" hidden>
+    Label detection may be broken (YouTube may have changed something).
+    Please update the extension or
+    <a href="https://github.com/Nova-47/ai-label-filter-for-youtube/issues" target="_blank" rel="noopener">report it</a>.
+  </section>
+
+  <section id="page">
+    <h2>This page</h2>
+    <div id="counts" class="muted">Open a YouTube tab to see what was filtered there.</div>
+    <div class="row" id="peek-row" hidden>
+      <span class="muted">Hidden videos are removed from view.</span>
+      <button type="button" id="peek">Reveal</button>
+    </div>
+  </section>
+
+  <section id="onboarding" hidden>
+    <h2>Community list (optional)</h2>
+    <p>YouTube's own AI label is only on a small share of AI videos. You can also hide channels
+      listed in <a href="https://github.com/Override92/AiSList" target="_blank" rel="noopener">AiSList</a>,
+      a community-maintained list (CC BY-NC 4.0, about 29,000 channels, with its own
+      false-positive review process).</p>
+    <p class="muted" style="margin-top:6px">Turning it on downloads the list from raw.githubusercontent.com
+      once a day; Chrome will ask for that permission. Nothing about you is sent.</p>
+    <div class="row" style="margin-top:10px; justify-content:flex-end">
+      <button type="button" id="list-later">Not now</button>
+      <button type="button" class="primary" id="list-on">Turn on</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Settings</h2>
+    <div class="row">
+      <span>Filtered videos</span>
+      <div class="seg">
+        <label><input type="radio" name="mode" value="hide" /> Hide</label>
+        <label><input type="radio" name="mode" value="dim" /> Dim + reason</label>
+      </div>
+    </div>
+    <div class="row">
+      <span>Check every visible video</span>
+      <label class="toggle">
+        <input type="checkbox" id="lookups" aria-label="Check every visible video" />
+        <span class="slider"></span>
+      </label>
+    </div>
+    <p class="muted" style="margin-top:4px">Off by default. When on, sends one small request to YouTube per
+      visible video (at most one per second) to read its label. Requests stop for 24 h if YouTube pushes back.</p>
+    <div class="row" id="list-row">
+      <span>Hide channels listed in AiSList</span>
+      <label class="toggle">
+        <input type="checkbox" id="aislist" aria-label="Hide channels listed in AiSList" />
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div id="list-info" class="muted" hidden>
+      <span id="list-status"></span>
+      <button type="button" class="link" id="list-refresh">Refresh now</button>
+      <div>List by <a href="https://github.com/Override92/AiSList" target="_blank" rel="noopener">Override92/AiSList</a>,
+        <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">CC BY-NC 4.0</a>.
+        Wrongly listed channel? Use <b>Allow channel</b> and report it to the list.</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Hidden channels</h2>
+    <ul id="blocked"></ul>
+    <p class="muted" id="blocked-empty">None yet. Use "Hide this channel" on a labelled video.</p>
+  </section>
+
+  <section>
+    <h2>Always shown channels</h2>
+    <ul id="allowed"></ul>
+    <p class="muted" id="allowed-empty">None. Use "Allow channel" on a dimmed video.</p>
+  </section>
+
+  <p class="muted" id="flagged"></p>
+
+  <script src="shared.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
