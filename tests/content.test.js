@@ -98,3 +98,42 @@ test('requests: clientVersion is read from the page once its script is there', a
   await b.run(3000);
   assert.deepEqual(b.requests.map((r) => r.clientVersion), ['2.20261012.01.00', '2.20990101.00.00']);
 });
+
+// Review E6: scroll through 8 screens of 6 cards, half a second each, then
+// stop. The cards on the last screen used to wait for 27 stale lookups.
+test('card lookups: on-screen cards first, scrolled-away cards dropped', async () => {
+  const b = browser();
+  Object.assign(b.store, { selfcheck: { at: b.now() }, settings: { lookups: true } });
+  const t = b.tab('https://www.youtube.com/');
+  const screens = [...Array(8)].map((_, s) => [...Array(6)].map((_, i) => t.addCard(`s${s}card${i}`.padEnd(11, 'x'))));
+  await b.run(1000);                              // load + first scan: all cards observed
+  assert.equal(t.io.targets.size, 48);
+  for (let s = 0; s < 8; s++) {
+    t.intersect(screens[s], true);
+    if (s) t.intersect(screens[s - 1], false);
+    await b.run(500);
+  }
+  const stop = b.now();
+  const last = new Set(screens[7].map((c) => c.dataset.ailfVid));
+  await b.run(30000);
+  const after = b.requests.filter((r) => r.at >= stop);
+  assert.ok(after.length && after.every((r) => last.has(r.videoId)), 'only the screen in view');
+  assert.ok(after[0].at - stop <= 3000, `first after stop: ${after[0].at - stop} ms`);
+  assert.equal(b.requests.filter((r) => last.has(r.videoId)).length, 6);
+  assert.ok(b.requests.length <= 6 + 4, `${b.requests.length} requests`);
+});
+
+test('card lookups: nothing while the tab is in the background', async () => {
+  const b = browser();
+  Object.assign(b.store, { selfcheck: { at: b.now() }, settings: { lookups: true } });
+  const t = b.tab('https://www.youtube.com/');
+  const cards = [1, 2, 3].map((i) => t.addCard(('bg' + i).padEnd(11, 'x')));
+  await b.run(1000);
+  t.visibility(true);
+  t.intersect(cards, true);
+  await b.run(10000);
+  assert.equal(b.requests.length, 0);
+  t.visibility(false);
+  await b.run(10000);
+  assert.equal(b.requests.length, 3);
+});

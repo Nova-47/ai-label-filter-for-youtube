@@ -296,7 +296,7 @@
     const vid = link ? A.videoIdFromHref(link.getAttribute('href')) : null;
     if ((card.dataset.ailfVid || null) !== vid) {
       unmark(card);
-      if (observed.has(card)) { io.unobserve(card); observed.delete(card); }
+      if (observed.has(card)) { io.unobserve(card); observed.delete(card); inView.delete(card); }
       if (!vid) return;
       card.dataset.ailfVid = vid;
     }
@@ -339,25 +339,33 @@
   }
 
   // ── Per-card lookups (Tier 2, off by default) ──────────────────────────────
-  // Only cards that are on screen and still unknown; one request at a time,
-  // at least 1 s apart plus jitter; each video tried once per tab.
+  // Only cards still unknown and on screen when their turn comes (newest
+  // first, see shared.js takeNext), only while the tab is in front; each
+  // video tried once per tab. Requests share lookup()'s lock and 1 s gap.
   const io = new IntersectionObserver(onIntersect, { rootMargin: '200px 0px' });
   const observed = new WeakSet();
+  const inView = new Set();  // observed cards on screen now
   const queue = [];
   const tried = new Set();
   let pumping = false;
 
   const wantLookups = () => settings.enabled && settings.lookups && !A.breakerOpen(breaker);
+  const unknown = (vid) => A.cacheGet(cache, vid, A.today()) === null;
+  function onScreen(vid) {
+    for (const c of inView) {
+      if (!c.isConnected) inView.delete(c);
+      else if (c.dataset.ailfVid === vid) return true;
+    }
+    return false;
+  }
+  const wanted = (vid) => !tried.has(vid) && unknown(vid) && onScreen(vid);
 
   function onIntersect(entries) {
-    if (!wantLookups()) return;
-    const day = A.today();
     for (const e of entries) {
+      if (!e.isIntersecting) { inView.delete(e.target); continue; }
+      inView.add(e.target);
       const vid = e.target.dataset.ailfVid;
-      if (!e.isIntersecting || !vid || tried.has(vid) || A.cacheGet(cache, vid, day) !== null) continue;
-      tried.add(vid);
-      queue.push(vid);
-      if (queue.length > 30) tried.delete(queue.shift()); // scrolled past long ago
+      if (vid && wantLookups() && wanted(vid)) A.enqueue(queue, vid);
     }
     pump();
   }
@@ -366,10 +374,11 @@
     if (pumping) return;
     pumping = true;
     try {
-      while (queue.length && wantLookups()) {
-        const vid = queue.shift();
-        if (A.cacheGet(cache, vid, A.today()) !== null) continue;
-        await lookup(vid);
+      let vid;
+      while (wantLookups() && !document.hidden && (vid = A.takeNext(queue, wanted))) {
+        tried.add(vid);
+        const r = await lookup(vid, { want: () => unknown(vid) && onScreen(vid) });
+        if (r.kind === 'paused') tried.delete(vid); // not sent: may come back into view
         await sleep(Math.random() * 1000); // jitter on top of the shared 1 s gap
       }
     } finally { pumping = false; }
@@ -505,5 +514,6 @@
   const mo = new MutationObserver(scheduleScan);
   mo.observe(document.documentElement, { childList: true, subtree: true });
   window.addEventListener('yt-navigate-finish', () => { checkNav(); scheduleScan(); });
+  document.addEventListener('visibilitychange', pump);
   load();
 })();

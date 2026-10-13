@@ -237,6 +237,29 @@ test('backoff: 15 min, doubling, at most 24 h', () => {
   assert.equal(A.backoff(A.breakerTrip('HTTP 429', now), 'HTTP 400', now).n, 1); // a block has no count
 });
 
+test('enqueue / takeNext: newest first, unwanted entries dropped, capped', () => {
+  const q = [];
+  for (const v of ['a', 'b', 'c', 'd']) A.enqueue(q, v);
+  A.enqueue(q, 'b');                                  // seen again: moves to the top
+  assert.deepEqual(q, ['a', 'c', 'd', 'b']);
+  assert.equal(A.takeNext(q, () => true), 'b');
+  const onScreen = new Set(['a', 'c']);
+  assert.equal(A.takeNext(q, (v) => onScreen.has(v)), 'c'); // 'd' scrolled away: dropped
+  assert.deepEqual(q, ['a']);
+  assert.equal(A.takeNext(q, () => false), null);
+  assert.deepEqual(q, []);
+  for (let i = 0; i < A.QUEUE_MAX + 5; i++) A.enqueue(q, 'v' + i);
+  assert.equal(q.length, A.QUEUE_MAX);
+  assert.equal(q[0], 'v5');                           // the oldest went first
+  // Review E6 in miniature: screens s0..s7 queued while scrolling, s7 in view
+  const scroll = [];
+  for (let s = 0; s < 8; s++) for (let i = 0; i < 6; i++) A.enqueue(scroll, `s${s}c${i}`);
+  const inView = (v) => v.startsWith('s7') || v.startsWith('s6c5');
+  const order = [];
+  for (let v; (v = A.takeNext(scroll, inView));) order.push(v);
+  assert.deepEqual(order, ['s7c5', 's7c4', 's7c3', 's7c2', 's7c1', 's7c0', 's6c5']);
+});
+
 test('decide: allowlist > blocklist > label > channel flag > AiSList', () => {
   const U = 'UCp1mMtCnO_11BC4dbGv4BSA';
   const idx = (o = {}) => ({

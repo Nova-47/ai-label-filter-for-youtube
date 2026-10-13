@@ -208,6 +208,28 @@
     try { return { kind: 'ok', ...parseNext(JSON.parse(body)) }; } catch { return { kind: 'bad', why: 'not JSON' }; }
   }
 
+  // ── Card lookup queue (Tier 2) ─────────────────────────────────────────────
+  // Newest first: what is on screen now came into view last. A video seen
+  // again moves to the top; past QUEUE_MAX the oldest entries go.
+  const QUEUE_MAX = 30;
+  function enqueue(queue, vid, max = QUEUE_MAX) {
+    const i = queue.indexOf(vid);
+    if (i >= 0) queue.splice(i, 1);
+    queue.push(vid);
+    if (queue.length > max) queue.shift();
+    return queue;
+  }
+
+  // The next video to look up, or null. Entries no longer wanted (scrolled
+  // away, card reused, verdict known) are dropped on the way.
+  function takeNext(queue, wanted) {
+    while (queue.length) {
+      const vid = queue.pop();
+      if (wanted(vid)) return vid;
+    }
+    return null;
+  }
+
   // ── Decision ───────────────────────────────────────────────────────────────
   // Why a card should be hidden, or null to show it. Order matters: the
   // allowlist always wins; the user's own blocklist comes before automatic
@@ -234,10 +256,10 @@
 
   const api = {
     NEXT_FIELDS, CANARY_IDS, TTL_CLEAN_DAYS, TTL_AI_DAYS, CACHE_MAX, BREAKER_MS, RETRY_MS, REQUEST_GAP_MS,
-    AUTOFLAG_MIN_AI, AISLIST_URL, DAY,
+    AUTOFLAG_MIN_AI, AISLIST_URL, DAY, QUEUE_MAX,
     isAiBadge, parseNext, isUcid, normalizeHandle, channelFromHref, videoIdFromHref,
     parseList, today, cacheGet, cachePut, cacheOwner, cachePrune, recordVerdict, mergeChannel, isAutoFlagged,
-    isBlockedResponse, breakerOpen, breakerTrip, backoff, readResponse, decide, channelKeys,
+    isBlockedResponse, breakerOpen, breakerTrip, backoff, readResponse, enqueue, takeNext, decide, channelKeys,
   };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.AILF = api;
