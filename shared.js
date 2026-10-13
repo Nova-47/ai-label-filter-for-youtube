@@ -30,6 +30,7 @@
   const BREAKER_MS = DAY;        // pause all YouTube requests this long
   const RETRY_MS = 15 * 60000;   // first pause after a refused request (doubles)
   const REQUEST_GAP_MS = 1000;   // between two YouTube requests, browser-wide
+  const SELFCHECK_STALE_MS = 5 * 60000; // a self-check unfinished this long was cut off
   const AUTOFLAG_MIN_AI = 2;     // labelled videos needed to flag a channel
 
   const AISLIST_URL =
@@ -215,9 +216,9 @@
   const breakerOpen = (b, now = Date.now()) => !!b && typeof b.until === 'number' && now < b.until;
   const breakerTrip = (reason, now = Date.now()) => ({ until: now + BREAKER_MS, reason: String(reason) });
 
-  // Wait before the next request until REQUEST_GAP_MS after the last one was
-  // sent (`last`, from any tab, even one reloaded mid-request, which drops the
-  // lock early). At most the gap, so a clock set back cannot stall requests.
+  // Wait before the next request until REQUEST_GAP_MS after `last`: the last
+  // reply, or the last send if its tab was reloaded mid-request (from any
+  // tab). At most the gap, so a clock set back cannot stall requests.
   const requestWait = (last, now = Date.now()) =>
     (Number.isFinite(last) ? Math.min(REQUEST_GAP_MS, Math.max(0, last + REQUEST_GAP_MS - now)) : 0);
 
@@ -242,8 +243,12 @@
 
   // ── Self-check ─────────────────────────────────────────────────────────────
   // Due once a day (by the last run's start), never while requests are paused.
+  // A run still `pending` after SELFCHECK_STALE_MS was cut off (its tab was
+  // closed or reloaded before the verdict was stored): due again, so it
+  // can't use up the day.
   const selfcheckDue = (sc, b, now = Date.now()) =>
-    !breakerOpen(b, now) && !(sc && typeof sc.at === 'number' && now >= sc.at && now - sc.at < DAY);
+    !breakerOpen(b, now) && !(sc && typeof sc.at === 'number' && now >= sc.at && now - sc.at < DAY &&
+      !(sc.pending && now - sc.at >= SELFCHECK_STALE_MS));
 
   // `results`: lookup() results for the canaries, in order (the check stops at
   // the first labelled one or the first failure). Verdicts:
@@ -362,7 +367,7 @@
 
   const api = {
     NEXT_FIELDS, CANARY_IDS, TTL_CLEAN_DAYS, TTL_AI_DAYS, CACHE_MAX, CHANNELS_MAX, BREAKER_MS, RETRY_MS,
-    REQUEST_GAP_MS, AUTOFLAG_MIN_AI, AISLIST_URL, DAY, QUEUE_MAX,
+    REQUEST_GAP_MS, SELFCHECK_STALE_MS, AUTOFLAG_MIN_AI, AISLIST_URL, DAY, QUEUE_MAX,
     isAiBadge, parseNext, isUcid, normalizeHandle, channelFromHref, videoIdFromHref,
     parseList, today, cacheGet, cachePut, cacheOwner, cachePrune, recordVerdict, mergeChannel, isAutoFlagged,
     channelsPrune, mergeDirty, mergeVerdict, isBlockedResponse, breakerOpen, breakerTrip, requestWait, backoff, readResponse,

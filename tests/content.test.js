@@ -368,3 +368,34 @@ test('a reused card whose link alone changes is checked again', async () => {
   assert.equal('ailf' in card.dataset, false);
   assert.equal(card.dataset.ailfVid, 'cleancleanc');
 });
+
+// Live test: YouTube reloaded the page (?themeRefresh=1) while lookup() held
+// the lock for 1 s after the canary's reply, so the verdict was never stored
+// and the claimed run used up the day.
+test('self-check: a page closed right after the reply still stores the verdict', async () => {
+  const b = browser({ respond: () => reply(200, fixture('labelled-yHG-pivADos.json')) });
+  const t = b.tab('https://www.youtube.com/');
+  while (!b.requests.length) await b.run(10);
+  await b.run(300);                                     // reply in (100 ms), well within 1 s
+  t.close();
+  assert.equal(b.store.selfcheck.state, 'ok');
+  assert.equal(b.store.selfcheck.pending, undefined);
+});
+
+test('self-check: a run cut off before its verdict is retried later', async () => {
+  const b = browser({ respond: () => reply(200, fixture('labelled-yHG-pivADos.json')) });
+  const t = b.tab('https://www.youtube.com/');
+  while (!b.requests.length) await b.run(10);
+  t.close();                                            // before the reply
+  await b.run(1000);
+  assert.equal(b.store.selfcheck.state, undefined);
+  b.tab('https://www.youtube.com/');                    // may still be running elsewhere: wait
+  await b.run(10000);
+  assert.equal(b.requests.length, 1);
+  await b.run(5 * 60000);
+  b.tab('https://www.youtube.com/');                    // cut off: run again
+  await b.run(10000);
+  assert.equal(b.requests.length, 2);
+  assert.equal(b.store.selfcheck.state, 'ok');
+  assert.equal(b.store.selfcheck.pending, undefined);
+});

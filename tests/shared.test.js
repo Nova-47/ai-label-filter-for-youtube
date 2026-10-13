@@ -321,6 +321,12 @@ test('selfcheckDue: once a day, not while paused', () => {
   assert.equal(A.selfcheckDue({ at: now + 3600000 }, null, now), true);   // clock went back
   assert.equal(A.selfcheckDue({ state: 'ok' }, null, now), true);
   assert.equal(A.selfcheckDue(undefined, A.breakerTrip('HTTP 429', now), now), false);
+  const S = A.SELFCHECK_STALE_MS;
+  assert.equal(A.selfcheckDue({ at: now - S + 1, pending: true }, null, now), false); // may still be running
+  assert.equal(A.selfcheckDue({ at: now - S, pending: true }, null, now), true);      // cut off: retry
+  assert.equal(A.selfcheckDue({ at: now - S, state: 'ok' }, null, now), false);
+  assert.equal(A.selfcheckDue({ at: now - S }, null, now), false);                    // done, warning cleared
+  assert.equal(A.selfcheckDue({ at: now - S, pending: true }, A.breakerTrip('HTTP 429', now), now), false);
 });
 
 test('canaries: two, from different channels', () => {

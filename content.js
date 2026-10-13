@@ -203,26 +203,28 @@
   // Every caller (watch page, card lookups, self-check) in every tab goes
   // through one Web Lock. Locks are per origin, so all youtube.com tabs share
   // it (the page can see it too, hence the long name; an incognito window
-  // has its own). The holder keeps it for REQUEST_GAP_MS after the reply, so
-  // requests go out one at a time and at least 1 s apart, browser-wide. A tab
-  // reloaded mid-request drops the lock at once, so each send is also stored
-  // as `lastRequest` and the next one waits until 1 s after it.
+  // has its own), so requests go out one at a time, browser-wide. Each send
+  // and each reply is stored as `lastRequest`, and the next request waits
+  // until 1 s after it: 1 s after the previous reply, or after the previous
+  // send if that tab was reloaded mid-request. The lock is not held for that
+  // second, so the caller gets the result at once (a tab reloaded meanwhile
+  // used to lose it, e.g. the self-check's verdict).
   const REQUEST_LOCK = 'ai-label-filter-for-youtube:request';
 
   // → readResponse() result ({ kind: 'ok', ai, ucid, handle } or kind
   // 'blocked' | 'bad'), or kind 'network' / 'paused'. `record: false` is for
   // the self-check, whose videos must not count towards channel flags;
-  // `want()` is asked again once the lock is ours.
+  // `want()` is asked again once the lock is ours and the gap has passed.
   async function lookup(videoId, { record = true, want } = {}) {
     try {
       return await navigator.locks.request(REQUEST_LOCK, async () => {
         if (!alive()) return { kind: 'paused' };
-        // The previous holder may have paused requests a moment ago.
-        const got = await chrome.storage.local.get(['breaker', 'lastRequest']);
-        breaker = got.breaker || null;
-        if (A.breakerOpen(breaker) || (want && !want())) return { kind: 'paused' };
-        const wait = A.requestWait(got.lastRequest);
+        const wait = A.requestWait((await chrome.storage.local.get('lastRequest')).lastRequest);
         if (wait) await sleep(wait);
+        if (!alive()) return { kind: 'paused' };
+        // The previous holder may have paused requests a moment ago.
+        breaker = (await chrome.storage.local.get('breaker')).breaker || null;
+        if (A.breakerOpen(breaker) || (want && !want())) return { kind: 'paused' };
         let r;
         try {
           await chrome.storage.local.set({ lastRequest: Date.now() });
@@ -238,7 +240,9 @@
           if (breaker) await recovered(); // an expired back-off starts over
           if (record && r.ai !== null) remember(videoId, r);
         }
-        await sleep(A.REQUEST_GAP_MS);
+        try {
+          await chrome.storage.local.set({ lastRequest: Date.now() });
+        } catch { await sleep(A.REQUEST_GAP_MS); } // can't tell the others: keep the gap here
         return r;
       });
     } catch (e) {
@@ -265,7 +269,10 @@
     await pause(null);
     try {
       const { selfcheck } = await chrome.storage.local.get('selfcheck');
-      if (selfcheck && selfcheck.state === 'error') await chrome.storage.local.set({ selfcheck: { at: selfcheck.at } });
+      if (selfcheck && selfcheck.state === 'error') {
+        const { state, ...rest } = selfcheck; // keeps `at` (and `pending` mid-run)
+        await chrome.storage.local.set({ selfcheck: rest });
+      }
     } catch { /* the warning stays until the next run */ }
   }
 
@@ -503,7 +510,9 @@
   // ── Self-check: is label detection still working? ──────────────────────────
   // Once a day per browser (not per tab), only while requests are allowed.
   // The lock makes check-and-claim atomic: of several tabs opening at once,
-  // one runs it and the others skip. Verdicts: see shared.js.
+  // one runs it and the others skip. The claim is marked `pending` until the
+  // verdict is stored; a tab closed in between leaves it, and shared.js
+  // selfcheckDue() lets a later page retry. Verdicts: see shared.js.
   const SELFCHECK_LOCK = 'ai-label-filter-for-youtube:selfcheck';
   async function maybeSelfCheck() {
     try {
@@ -511,7 +520,7 @@
         if (!held) return;
         const { selfcheck } = await chrome.storage.local.get('selfcheck');
         if (!A.selfcheckDue(selfcheck, breaker)) return;
-        await chrome.storage.local.set({ selfcheck: { ...selfcheck, at: Date.now() } }); // claim today's run
+        await chrome.storage.local.set({ selfcheck: { ...selfcheck, at: Date.now(), pending: true } }); // claim today's run
         const results = [];
         for (const id of A.CANARY_IDS) {
           const r = await lookup(id, { record: false });

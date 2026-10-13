@@ -109,7 +109,7 @@ With default settings the extension sends one request per watch page whose resul
 
 ### Daily self-check
 
-Once every 24 hours per browser (not per tab), when a YouTube page loads or you navigate, the extension asks about two videos that carried the label on 2026-10-13: `yHG-pivADos` (@eigi_and_ai) and, only if the first does not show the label, `Xpg-JIuJ_cU` (@foreverharmony_official). It runs even when "Check every visible video" is off, so it normally sends one or two requests a day. It does not run while filtering is off or requests are paused; if requests are paused before it has sent anything, it runs once they are allowed again. Its results are not saved and do not count towards channel flags.
+Once every 24 hours per browser (not per tab), when a YouTube page loads or you navigate, the extension asks about two videos that carried the label on 2026-10-13: `yHG-pivADos` (@eigi_and_ai) and, only if the first does not show the label, `Xpg-JIuJ_cU` (@foreverharmony_official). It runs even when "Check every visible video" is off, so it normally sends one or two requests a day. It does not run while filtering is off or requests are paused; if requests are paused before it has sent anything, it runs once they are allowed again. If the page closes or reloads before the check finishes, it runs again on a page opened 5 minutes or more later. Its results are not saved and do not count towards channel flags.
 
 | Result | Popup |
 |---|---|
