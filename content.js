@@ -129,9 +129,8 @@
       await navigator.locks.request(SAVE_LOCK, async () => {
         const got = await chrome.storage.local.get(['verdicts', 'channels']);
         const v = new Map(dirty.verdicts), c = new Map(dirty.channels);
-        if (!v.size && !c.size) return;
-        const out = {};
-        if (v.size) out.verdicts = A.cachePrune(A.mergeDirty(got.verdicts || {}, cache, v.keys(), A.mergeVerdict), A.today());
+        if (!v.size) return; // a channel only changes along with a verdict
+        const out = { verdicts: A.cachePrune(A.mergeDirty(got.verdicts || {}, cache, v.keys(), A.mergeVerdict), A.today()) };
         if (c.size) {
           const keep = new Set([...Object.values(blocked), ...Object.values(allowed)].flatMap((e) => A.channelKeys(e, idx)));
           out.channels = A.channelsPrune(A.mergeDirty(got.channels || {}, channels, c.keys(), A.mergeChannel), keep);

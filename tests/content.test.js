@@ -58,7 +58,7 @@ test('requests: a watch page left before its turn is not looked up', async () =>
 });
 
 test('requests: a block in one tab stops the request already queued in another', async () => {
-  const b = browser({ respond: () => reply(429) });
+  const b = browser({ respond: () => reply(429), eventMs: 2000 }); // even if onChanged is late
   b.store.selfcheck = { at: b.now() };
   b.tab(watch('aaaaaaaaaaa'));
   b.tab(watch('bbbbbbbbbbb'));
@@ -212,6 +212,34 @@ test('saving: seen-day updates alone write nothing; only changed keys are writte
   t.navigate(watch('dQw4w9WgXcQ'));
   await b.run(10000);
   assert.deepEqual(b.writes, ['verdicts', 'channels,verdicts']);
+});
+
+test('saving: a channel changed while its save is being written is saved again', async () => {
+  const b = browser({ setLatency: 1500, respond: () => reply(200, fixture('labelled-yHG-pivADos.json')) });
+  b.store.selfcheck = { at: b.now() };
+  const t = b.tab(watch(LABELLED));
+  await b.run(3500);                                    // the first save is being written
+  t.navigate(watch('uxZZg64CUDM'));                     // same channel, labelled too
+  await b.run(20000);
+  assert.deepEqual(b.store.channels[U].ai, [LABELLED, 'uxZZg64CUDM']);
+});
+
+test('card lookups: a card that scrolls away while waiting for the lock is skipped', async () => {
+  const b = browser();
+  Object.assign(b.store, { selfcheck: { at: b.now() }, settings: { lookups: true } });
+  const feed = b.tab('https://www.youtube.com/');
+  const card = feed.addCard('cardcardcar');
+  await b.run(1000);
+  b.tab(watch('aaaaaaaaaaa'));                          // another tab takes the lock
+  await b.run(50);
+  feed.intersect([card], true);                         // queued, waits for the lock
+  await b.run(400);
+  feed.intersect([card], false);                        // gone before its turn
+  await b.run(5000);
+  assert.deepEqual(b.requests.map((r) => r.videoId), ['aaaaaaaaaaa']);
+  feed.intersect([card], true);                         // back in view: looked up now
+  await b.run(5000);
+  assert.deepEqual(b.requests.map((r) => r.videoId), ['aaaaaaaaaaa', 'cardcardcar']);
 });
 
 // Review M7: in hide mode an auto-flagged channel's unlabelled videos used to

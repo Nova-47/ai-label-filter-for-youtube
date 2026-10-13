@@ -12,7 +12,7 @@ const fixture = (name) => src('tests/fixtures/' + name);
 const flush = async () => { for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r)); };
 const VIDEO_LINK = '/watch?v=';
 
-function browser({ latency = 0, setLatency = latency, netMs = 100, respond = () => ({ status: 200, body: fixture('normal-dQw4w9WgXcQ.json') }) } = {}) {
+function browser({ latency = 0, setLatency = latency, eventMs = 0, netMs = 100, respond = () => ({ status: 200, body: fixture('normal-dQw4w9WgXcQ.json') }) } = {}) {
   let now = Date.UTC(2026, 9, 13, 12);
   let seq = 0;
   const timers = [];
@@ -33,12 +33,13 @@ function browser({ latency = 0, setLatency = latency, netMs = 100, respond = () 
   }
 
   // chrome.storage.local: get/remove take `latency` ms, set `setLatency` ms
-  // (writing a big object is the slow part); onChanged goes to all tabs.
+  // (writing a big object is the slow part); onChanged reaches all tabs
+  // `eventMs` after the write.
   const store = {};
   const writes = [];   // keys of every set(), in order
   const listeners = [];
   const later = (fn, ms = latency) => new Promise((res) => setTimeout(() => res(fn()), ms));
-  const changed = (ch) => setTimeout(() => { for (const l of listeners) l(structuredClone(ch), 'local'); });
+  const changed = (ch) => setTimeout(() => { for (const l of listeners) l(structuredClone(ch), 'local'); }, eventMs);
   const local = {
     get: (keys) => later(() => {
       const out = {};

@@ -390,6 +390,11 @@ test('listPut / listDrop: one key per channel; Remove removes every alias', () =
   A.listPut(blocked, { handle: 'eigi_and_ai' }, A.buildIndex({}, blocked, {}), 3);
   assert.deepEqual(blocked, { [U]: { ucid: U, handle: 'eigi_and_ai', added: 3 } });
   assert.deepEqual(A.listPut({}, null, A.buildIndex({}, {}, {}), 1), {});
+  // No pair known anywhere but the entry itself: still the same channel.
+  const none = A.buildIndex({}, {}, {});
+  assert.deepEqual(A.listDrop({ [U]: { ucid: U, handle: 'eigi_and_ai' } }, { handle: 'eigi_and_ai' }, none), {});
+  assert.deepEqual(A.listPut({ [U]: { ucid: U, handle: 'eigi_and_ai', added: 1 } }, { handle: 'eigi_and_ai' }, none, 4),
+    { [U]: { ucid: U, handle: 'eigi_and_ai', added: 4 } });
 });
 
 test('mask covers the two paths and nothing from the sidebar', () => {
