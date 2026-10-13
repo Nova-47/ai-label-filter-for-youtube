@@ -8,12 +8,13 @@ A Chrome extension that dims or hides the videos YouTube itself labels as made w
 
 **Install:** download the zip from [Releases](https://github.com/Nova-47/ai-label-filter-for-youtube/releases) and load it in Chrome ([steps](#install)). Not in the Chrome Web Store yet. Then [try it in 60 seconds](#try-it-in-60-seconds).
 
-<!-- Screenshots, added once real captures exist:
-![Demo](docs/demo.gif)
-![Home feed with labelled videos dimmed, each showing why](docs/feed-dim.png)
+![Demo: a dimmed video is shown again with one click](docs/demo.gif)
+
+![Search results with labelled videos dimmed, each showing why](docs/feed-dim.png)
+
 ![Banner on a labelled video's watch page](docs/watch-banner.png)
+
 ![Popup](docs/popup.png)
--->
 
 > **It only catches what YouTube labels, and most AI videos are not labelled.**
 > That is the trade: it never guesses, so it is precise but not complete.
