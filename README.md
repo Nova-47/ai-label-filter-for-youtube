@@ -6,7 +6,7 @@ A Chrome extension that dims or hides videos YouTube labels as made with AI and 
 
 [한국어](README.kr.md)
 
-Download the zip from [Releases](https://github.com/Nova-47/ai-label-filter-for-youtube/releases) and load it in Chrome ([steps](#install)). The Chrome Web Store listing is under review. [Try it in 60 seconds](#try-it-in-60-seconds).
+Install it from the [Chrome Web Store](https://chromewebstore.google.com/detail/bkobanajomgkmbcdkmmalfjdicidcajk), or download the zip from [Releases](https://github.com/Nova-47/ai-label-filter-for-youtube/releases) and load it unpacked ([steps](#install)). [Try it in 60 seconds](#try-it-in-60-seconds).
 
 ![Demo: a dimmed video is shown again with one click](docs/demo.gif)
 
@@ -25,6 +25,10 @@ There is no server, dependency, or build step. The extension requires `storage` 
 ---
 
 ## Install
+
+Install it from the [Chrome Web Store](https://chromewebstore.google.com/detail/bkobanajomgkmbcdkmmalfjdicidcajk).
+
+To load it unpacked instead:
 
 1. Download `ai-label-filter-for-youtube-<version>.zip` from [Releases](https://github.com/Nova-47/ai-label-filter-for-youtube/releases) and unzip it into a folder. (Or clone the repository: it loads as is, there is nothing to build.)
 2. Open `chrome://extensions` and turn on **Developer mode** (top right).

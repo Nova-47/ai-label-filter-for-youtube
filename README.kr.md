@@ -6,7 +6,7 @@ YouTube가 "AI로 제작됨" 라벨을 붙인 영상을 흐리게 하거나 숨�
 
 [English](README.md)
 
-[Releases](https://github.com/Nova-47/ai-label-filter-for-youtube/releases)에서 zip을 받아 Chrome에 로드합니다([방법](#설치)). Chrome 웹 스토어 등록은 심사 중입니다. [60초 안에 확인하기](#60초-안에-확인하기).
+[Chrome 웹 스토어](https://chromewebstore.google.com/detail/bkobanajomgkmbcdkmmalfjdicidcajk)에서 설치하거나, [Releases](https://github.com/Nova-47/ai-label-filter-for-youtube/releases)에서 zip을 받아 압축 해제된 확장 프로그램으로 로드합니다([방법](#설치)). [60초 안에 확인하기](#60초-안에-확인하기).
 
 ![데모: 흐리게 처리된 영상을 클릭 한 번으로 다시 표시](docs/demo.gif)
 
@@ -25,6 +25,10 @@ YouTube가 제목 아래에 AI 배지를 표시한 영상만 AI로 봅니다. �
 ---
 
 ## 설치
+
+[Chrome 웹 스토어](https://chromewebstore.google.com/detail/bkobanajomgkmbcdkmmalfjdicidcajk)에서 설치합니다.
+
+압축 해제된 확장으로 직접 로드하려면:
 
 1. [Releases](https://github.com/Nova-47/ai-label-filter-for-youtube/releases)에서 `ai-label-filter-for-youtube-<버전>.zip`을 받아 폴더에 압축을 풉니다. (저장소를 클론해도 됩니다. 빌드할 것이 없어서 그대로 로드됩니다.)
 2. `chrome://extensions`를 열고 오른쪽 위의 **개발자 모드**를 켭니다.
