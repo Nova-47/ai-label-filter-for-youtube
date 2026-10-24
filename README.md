@@ -38,6 +38,8 @@ To load it unpacked instead:
 
 Requires Chrome 110 or later.
 
+After the first install (not after updates), a welcome page opens in a new tab. It offers to turn on AiSList and **Check every visible video**, and has three example YouTube searches you can open once the list has downloaded. Settings change only when you click.
+
 ## Try it in 60 seconds
 
 By default, feeds change only for videos the extension already knows about, so a fresh install shows nothing. To test it:
@@ -137,6 +139,7 @@ There is no server, and nothing is sent to the developer. These are the extensio
 | **Check every visible video** is on | the same, per card on screen with no saved result | `www.youtube.com` | that video's ID | not sent |
 | Once a day (self-check) | the same, for one or two fixed videos | `www.youtube.com` | those videos' IDs | not sent |
 | AiSList is on: at most once per 24 h, and when you turn it on or press **Refresh now** | `GET` of the [AiSList blocklist file](https://github.com/Override92/AiSList) | `raw.githubusercontent.com` | an ordinary file download; the daily check sends the ETag of the copy it has, so an unchanged list is not downloaded again | not sent |
+| You click an example search on the welcome page | none by the extension: it opens an ordinary YouTube search in a new tab, the same as browsing there yourself | `www.youtube.com` | the search words | sent, as in any tab |
 
 As with any web request, YouTube and GitHub see your IP address and browser user agent.
 
