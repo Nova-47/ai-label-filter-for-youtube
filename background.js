@@ -40,7 +40,7 @@ async function doRefresh(force) {
         delete next.fetchedAt;
         delete next.count;
         next.attemptedAt = 0;
-        throw new Error('no stored copy of the list');
+        throw new Error('no stored AiSList copy');
       }
       next.fetchedAt = Date.now();
     } else if (!res.ok) {

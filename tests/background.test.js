@@ -90,7 +90,7 @@ test('background: 304 with no stored list is not a success; the next refresh dow
   assert.equal(b.store.aislistMeta.fetchedAt, undefined);
   assert.equal(b.store.aislistMeta.etag, undefined);
   assert.equal(b.store.aislistMeta.count, undefined);
-  assert.equal(b.store.aislistMeta.error, 'no stored copy of the list');
+  assert.equal(b.store.aislistMeta.error, 'no stored AiSList copy');
   status = 200;
   await b.message('aislist:maybeRefresh');                    // allowed at once, without If-None-Match
   assert.equal(b.requests.length, 2);
