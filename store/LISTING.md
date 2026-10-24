@@ -97,7 +97,7 @@ YouTube 라벨은 AI 생성 콘텐츠 일부에만 붙기 때문에 라벨이 �
 
 **Graphic assets** (screenshots are built from the real captures in `docs/`, never a mock-up that looks like an official YouTube product)
 - Store icon 128×128: `icons/icon128.png`
-- Screenshots 1280×800: `store/screenshot-1.png` (search "relaxing jazz" with AiSList on: dimmed cards with reason chips, caption credits the list), `store/screenshot-2.png` (watch-page banner), `store/screenshot-3.png` (popup)
+- Screenshots 1280×800, in this order: `store/screenshot-1.png` (feed with labelled videos dimmed), `store/screenshot-2.png` (search "relaxing jazz" with AiSList on, caption credits the list), `store/screenshot-3.png` (watch-page banner), `store/screenshot-4.png` (popup)
 - Small promo tile 440×280: `store/promo-small.png`
 
 **Homepage URL:** https://github.com/Nova-47/ai-label-filter-for-youtube
