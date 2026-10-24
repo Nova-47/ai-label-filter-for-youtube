@@ -2,7 +2,7 @@
 
 # AI Label Filter for YouTube
 
-A Chrome extension that dims YouTube videos labelled as made with AI and, if you turn it on, videos from channels on the community list [AiSList](https://github.com/Override92/AiSList) (by Override92, [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)). Each dimmed card shows a chip with the reason and a one-click **Show** (and **Allow channel** when the card links its channel). You can switch to hiding instead. Its only inferred rule identifies channels where most recently checked videos have labels; the chip shows the count, and you can disable it.
+A Chrome extension that dims YouTube videos labelled as made with AI. You can also turn on [AiSList](https://github.com/Override92/AiSList), a community list (by Override92, [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)). Dimmed cards show the reason and **Show**. When a card links its channel, it also shows **Allow channel**. Select **Hide** to remove filtered cards. Its only inferred rule identifies channels where most recently checked videos have labels. The chip shows the count, and you can disable it.
 
 Open source (MIT), with no dependencies or build step. Every network request is made in one of two functions, listed [below](#how-to-audit-it). No server or account, and nothing is sent to the developer.
 
@@ -18,7 +18,7 @@ Install it from the [Chrome Web Store](https://chromewebstore.google.com/detail/
 
 ![Popup](docs/popup.png)
 
-> YouTube labels only some AI videos, so the label alone catches few. AiSList (off by default) adds the most. It works best on searches and topics with many AI uploads, such as AI music, lofi, jazz and history; a personalised home feed may change little. "Check every visible video" (also off by default) reads the label of each video on screen.
+> YouTube labels only some AI videos. AiSList is off by default. It works best on searches and topics with many AI uploads, such as AI music, lofi, jazz and history. A personalised home feed may change little. "Check every visible video" is also off by default. It reads the label of each video on screen.
 
 A video counts as AI only if YouTube shows its AI badge under the title. It uses no model, title heuristic, or thumbnail heuristic. Filtered cards are dimmed by default and show a chip with the reason, **Show**, and, when the card links its channel, **Allow channel**. Select **Hide** in the popup to remove them.
 

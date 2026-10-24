@@ -7,10 +7,10 @@ const L = globalThis.AILF_LIST;
 const TEXT = {
   title: 'AI Label Filter is installed',
   intro: 'Right now it only acts on videos it already knows about, so your feed looks the same as before.',
-  expect: 'The community list below helps most on topics with lots of AI uploads, such as AI music, lofi, ' +
-    'jazz and history narration. On a personalised home feed it may change little.',
+  expect: 'The community list works best on searches and topics with many AI uploads, such as AI music, lofi, ' +
+    'jazz and history narration. A personalised home feed may change little.',
   listHeading: 'Community list (optional)',
-  listBody: 'Filter channels listed in AiSList, a community-maintained list of channels that post AI videos. ' +
+  listBody: 'Filter channels listed in AiSList. It is a community-maintained list of channels that post AI videos. ' +
     'By default, videos from listed channels are dimmed and show why.',
   creditBefore: 'List by ',
   creditLink: 'Override92/AiSList',
@@ -20,11 +20,11 @@ const TEXT = {
   listOn: 'Turn on AiSList',
   listLater: 'Not now',
   lookupsLabel: 'Check every visible video',
-  lookupsCost: 'Optional. Reads the YouTube label of each video you scroll past by sending one request to YouTube ' +
-    'at a time, at most one per second. YouTube labels only a small share of AI videos.',
+  lookupsCost: 'Optional. Checks the YouTube label for each video you scroll past. It sends one request to YouTube ' +
+    'at a time, at most once per second. YouTube labels only a small share of AI videos.',
   // Demo searches. Only queries measured in research/firstrun-measure.md.
   demoHeading: 'Try it on a search',
-  demoBody: 'Each button opens a YouTube search in a new tab where the list usually catches some videos.',
+  demoBody: 'Each button opens a YouTube search in a new tab.',
   demoQueries: ['lofi', 'relaxing jazz', 'history documentary'],
   demoNeedsList: 'Turn on AiSList first.',
   demoNeedsDownload: 'Available once the list has downloaded.',
@@ -35,7 +35,7 @@ const TEXT = {
   skipped: 'The list stays off.',
   downloading: 'AiSList is on. Downloading the list…',
   ready: (n) => `AiSList is on: ${n.toLocaleString()} channels.`,
-  failed: (why) => `AiSList is on, but the download failed (${why}). It will try again later.`,
+  failed: (why) => `AiSList is on. The download failed (${why}). It will try again later.`,
 };
 
 const $ = (id) => document.getElementById(id);
