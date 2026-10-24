@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "AI Label Filter for YouTube",
   "version": "1.1.0",
-  "description": "Dim videos YouTube labels as made with AI and show why, or hide them. Also channels you block. No server, no tracking.",
+  "description": "Dim YouTube videos labelled as made with AI and show why. Optional community list AiSList. Open source, no server, no tracking.",
   "minimum_chrome_version": "110",
   "permissions": ["storage"],
   "optional_host_permissions": ["https://raw.githubusercontent.com/*"],

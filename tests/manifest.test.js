@@ -16,6 +16,16 @@ test('manifest: MV3, minimal permissions', () => {
   assert.ok(manifest.description.length <= 132);
 });
 
+test('manifest: description is the store Summary in store/LISTING.md', () => {
+  const listing = fs.readFileSync(path.join(root, 'store', 'LISTING.md'), 'utf8');
+  const m = listing.match(/^\*\*Summary\*\*[^\n]*\n([^\n]+)$/m);
+  assert.ok(m, 'LISTING.md: no Summary line after "**Summary**"');
+  assert.equal(m[1].trim(), manifest.description);
+  const count = listing.match(/this text is (\d+)/);
+  assert.ok(count, 'LISTING.md: no "this text is N" character count');
+  assert.equal(Number(count[1]), manifest.description.length);
+});
+
 test('manifest, popup and welcome: referenced files exist', () => {
   const files = new Set([
     manifest.background.service_worker,

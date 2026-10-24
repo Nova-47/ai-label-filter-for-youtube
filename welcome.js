@@ -8,7 +8,7 @@ const TEXT = {
   title: 'AI Label Filter is installed',
   intro: 'Right now it only acts on videos it already knows about, so your feed looks the same as before.',
   expect: 'The community list works best on searches and topics with many AI uploads, such as AI music, lofi, ' +
-    'jazz and history narration. A personalised home feed may change little.',
+    'jazz and history. A personalised home feed may change little.',
   listHeading: 'Community list (optional)',
   listBody: 'Filter channels listed in AiSList. It is a community-maintained list of channels that post AI videos. ' +
     'By default, videos from listed channels are dimmed and show why.',

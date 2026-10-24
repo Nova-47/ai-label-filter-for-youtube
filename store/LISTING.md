@@ -10,8 +10,8 @@ that suggest an official product in any graphic asset.
 
 **Name** (from manifest): AI Label Filter for YouTube
 
-**Summary** (the manifest `description`, ≤132 chars; this text is 118; keep the two identical):
-Dim videos YouTube labels as made with AI and show why, or hide them. Also channels you block. No server, no tracking.
+**Summary** (the manifest `description`, ≤132 chars; this text is 127; keep the two identical, `tests/manifest.test.js` checks it):
+Dim YouTube videos labelled as made with AI and show why. Optional community list AiSList. Open source, no server, no tracking.
 
 **Category:** Productivity → Tools
 
@@ -20,14 +20,16 @@ Dim videos YouTube labels as made with AI and show why, or hide them. Also chann
 **Description (English):**
 
 ```
-Dim YouTube videos labelled as made with AI. You can also turn on the community list AiSList. Each dimmed video shows why. Click "Show" to see it. When the card links its channel, you can use "Allow channel". Select "Hide" to remove filtered videos instead.
+Dims YouTube videos labelled as made with AI and shows why, and can also filter channels on the community list AiSList (off by default). It helps most on searches with many AI uploads, such as lofi, jazz and history, and may change little on a personalised home feed. Nothing is sent to the developer.
+
+Each dimmed video shows why. Click "Show" to see it. When the card links its channel, you can use "Allow channel". Select "Hide" to remove filtered videos instead.
 
 AI Label Filter for YouTube uses YouTube's own "Made with AI" label and, optionally, AiSList. It does not guess from titles, thumbnails, or a detection model. A video is filtered only when there is a reason you can see.
 
-Open source (MIT), with no build step. Every network request is made in one of two functions. Nothing is sent to the developer.
+Open source (MIT), with no build step.
 
 MANY AI VIDEOS ARE NOT LABELLED
-YouTube labels only some AI-generated content, so many AI videos have no label. Turn on AiSList for wider coverage. It is a community-maintained list of AI channels with its own review and removal process, and it is off by default. It works best on searches and topics with many AI uploads, such as AI music, lofi, jazz and history. A personalised home feed may change little.
+YouTube labels only some AI-generated content, so many AI videos have no label. Turn on AiSList for wider coverage. It is a community-maintained list of AI channels with its own review and removal process, and it is off by default.
 
 WHAT IT DOES
 • On a video page: if YouTube labels a video as made with AI, a banner offers "Hide this channel" or "Dismiss"
@@ -57,14 +59,16 @@ This extension is not affiliated with, endorsed by, or sponsored by YouTube or G
 **Description (Korean, optional localized listing):** the UI is English only, so button and setting names are quoted in English.
 
 ```
-YouTube가 AI 제작 라벨을 붙인 영상을 흐리게 표시합니다. 커뮤니티 목록 AiSList도 켤 수 있습니다. 흐려진 영상마다 이유가 표시됩니다. "Show"를 누르면 다시 보입니다. 카드에 채널 링크가 있으면 "Allow channel"도 쓸 수 있습니다. 걸러진 영상을 아예 없애려면 "Hide"를 선택하세요.
+YouTube가 AI 제작 라벨을 붙인 영상을 흐리게 하고 이유를 보여 주며, 커뮤니티 목록 AiSList(기본 꺼짐)에 있는 채널도 거를 수 있습니다. AI 영상이 많은 검색(로파이, 재즈, 역사 등)에서 가장 효과가 크고, 개인화된 홈 피드는 별로 달라지지 않을 수 있습니다. 개발자에게 보내는 정보는 없습니다.
+
+흐려진 영상마다 이유가 표시됩니다. "Show"를 누르면 다시 보입니다. 카드에 채널 링크가 있으면 "Allow channel"도 쓸 수 있습니다. 걸러진 영상을 아예 없애려면 "Hide"를 선택하세요.
 
 AI Label Filter for YouTube는 YouTube의 "AI로 제작됨(Made with AI)" 라벨과, 켠 경우 AiSList를 사용합니다. 제목, 썸네일, 탐지 모델로 추측하지 않습니다. 확인할 수 있는 이유가 있을 때만 영상을 거릅니다.
 
-오픈소스(MIT)이며 빌드 과정이 없습니다. 모든 네트워크 요청은 두 함수에서만 보냅니다. 개발자에게 보내는 정보는 없습니다.
+오픈소스(MIT)이며 빌드 과정이 없습니다.
 
 라벨 없는 AI 영상이 많습니다
-YouTube 라벨은 AI 생성 콘텐츠 일부에만 붙기 때문에 라벨이 없는 AI 영상이 많습니다. 더 넓게 거르려면 AiSList를 켜세요. AiSList는 커뮤니티가 관리하는 AI 채널 목록으로, 자체 검토와 삭제 요청 절차가 있으며 기본값은 꺼져 있습니다. AI 영상이 많은 검색 결과나 주제(AI 음악, 로파이, 재즈, 역사 등)에서 가장 효과가 큽니다. 개인화된 홈 피드는 별로 달라지지 않을 수 있습니다.
+YouTube 라벨은 AI 생성 콘텐츠 일부에만 붙기 때문에 라벨이 없는 AI 영상이 많습니다. 더 넓게 거르려면 AiSList를 켜세요. AiSList는 커뮤니티가 관리하는 AI 채널 목록으로, 자체 검토와 삭제 요청 절차가 있으며 기본값은 꺼져 있습니다.
 
 기능
 • 시청 페이지: YouTube가 AI 제작 라벨을 붙인 영상에 "Hide this channel"(이 채널 숨기기) 또는 "Dismiss"(닫기) 배너를 표시합니다
