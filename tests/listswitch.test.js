@@ -57,19 +57,22 @@ test('turnOn: request is synchronous with an injected save too; denial changes n
   assert.deepEqual(settings(), { lookups: true });
 });
 
-// The callers must not await anything before calling turnOn().
+// The callers must not await anything before calling turnOn(): not in
+// turnListOn itself, and not in the popup listeners that call turnListOn.
 test('popup and welcome: nothing is awaited before L.turnOn in the click path', () => {
   const cases = [
-    ['popup.js', 'async function turnListOn()'],
-    ['welcome.js', "$('list-on').addEventListener('click'"],
+    ['popup.js', 'async function turnListOn()', 'L.turnOn('],
+    ['popup.js', "$('aislist').addEventListener('change'", 'turnListOn'],
+    ['popup.js', "$('list-on').addEventListener('click'", 'turnListOn'],
+    ['welcome.js', "$('list-on').addEventListener('click'", 'L.turnOn('],
   ];
-  for (const [file, start] of cases) {
+  for (const [file, start, call] of cases) {
     const text = src(file);
     const from = text.indexOf(start);
-    assert.ok(from >= 0, `${file}: handler not found`);
-    const at = text.indexOf('L.turnOn(', from);
-    assert.ok(at > from, `${file}: L.turnOn not called in handler`);
+    assert.ok(from >= 0, `${file}: handler not found: ${start}`);
+    const at = text.indexOf(call, from);
+    assert.ok(at > from, `${file}: ${call} not called in handler: ${start}`);
     const before = text.slice(from, at).replace(/await\s*$/, '');
-    assert.doesNotMatch(before, /\bawait\b/, `${file}: await before L.turnOn`);
+    assert.doesNotMatch(before, /\bawait\b/, `${file}: await before ${call} in ${start}`);
   }
 });
