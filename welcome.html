@@ -12,6 +12,9 @@
     .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px; }
     button { padding: 6px 14px; }
     #list-status { margin-top: 10px; }
+    .demo { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    #demo-reason { margin-top: 6px; }
+    button:disabled, button:disabled:hover { background: #2a2a2a; opacity: 0.5; cursor: default; }
   </style>
 </head>
 <body>
@@ -36,6 +39,14 @@
       <button type="button" class="primary" id="list-on" data-t="listOn"></button>
     </div>
     <p id="list-status" role="status" hidden></p>
+  </section>
+
+  <section>
+    <h2 data-t="demoHeading"></h2>
+    <p data-t="demoBody"></p>
+    <div class="demo" id="demo"></div>
+    <p class="muted" id="demo-reason" role="status"></p>
+    <p class="muted" data-t="demoHistory"></p>
   </section>
 
   <section>

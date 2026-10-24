@@ -22,6 +22,13 @@ const TEXT = {
   lookupsLabel: 'Check every visible video',
   lookupsCost: 'Optional. Reads the YouTube label of each video you scroll past by sending one request to YouTube ' +
     'at a time, at most one per second. YouTube labels only a small share of AI videos.',
+  // Demo searches. Only queries measured in research/firstrun-measure.md.
+  demoHeading: 'Try it on a search',
+  demoBody: 'Each button opens a YouTube search in a new tab where the list usually catches some videos.',
+  demoQueries: ['lofi', 'relaxing jazz', 'history documentary'],
+  demoNeedsList: 'Turn on AiSList first.',
+  demoNeedsDownload: 'Available once the list has downloaded.',
+  demoHistory: 'If you are signed in to YouTube, these searches appear in your YouTube search history.',
   later: 'You can change both later from the extension’s toolbar icon.',
   // Status lines under the list buttons.
   denied: 'Chrome did not grant access, so the list is off.',
@@ -33,6 +40,17 @@ const TEXT = {
 
 const $ = (id) => document.getElementById(id);
 for (const el of document.querySelectorAll('[data-t]')) el.textContent = TEXT[el.dataset.t];
+
+for (const q of TEXT.demoQueries) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = q;
+  b.disabled = true;
+  b.addEventListener('click', () => {
+    chrome.tabs.create({ url: 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q) });
+  });
+  $('demo').append(b);
+}
 
 let note = null; // 'denied' | 'skipped', shown while the list is off
 
@@ -46,6 +64,11 @@ async function render() {
     : note ? TEXT[note] : '';
   $('list-status').textContent = status;
   $('list-status').hidden = !status;
+  // Demo searches only make sense once the list is on and downloaded.
+  const ready = on && !!meta.fetchedAt;
+  for (const b of $('demo').children) b.disabled = !ready;
+  $('demo-reason').textContent = ready ? '' : on ? TEXT.demoNeedsDownload : TEXT.demoNeedsList;
+  $('demo-reason').hidden = ready;
 }
 
 $('list-on').addEventListener('click', async () => {
