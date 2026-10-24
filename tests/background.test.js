@@ -12,6 +12,7 @@ function boot({ store = {}, granted = true, respond }) {
   const listeners = {};
   const on = (name) => ({ addListener: (fn) => { listeners[name] = fn; } });
   const requests = [];
+  const tabs = [];
   const chrome = {
     storage: { local: {
       get: async (keys) => {
@@ -23,7 +24,8 @@ function boot({ store = {}, granted = true, respond }) {
       remove: async (keys) => { for (const k of [].concat(keys)) delete store[k]; },
     } },
     permissions: { contains: async () => granted, onAdded: on('added'), onRemoved: on('removed') },
-    runtime: { onMessage: on('message'), onStartup: on('startup') },
+    runtime: { onMessage: on('message'), onStartup: on('startup'), onInstalled: on('installed') },
+    tabs: { create: async (props) => { tabs.push(props); return { id: tabs.length }; } },
   };
   const ctx = vm.createContext({
     chrome, console, structuredClone, Promise, Date,
@@ -33,7 +35,7 @@ function boot({ store = {}, granted = true, respond }) {
   ctx.importScripts = (f) => vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), ctx);
   vm.runInContext(fs.readFileSync(path.join(root, 'background.js'), 'utf8'), ctx);
   const message = (action) => new Promise((res) => listeners.message({ action }, {}, res));
-  return { store, requests, message, listeners };
+  return { store, requests, message, listeners, tabs };
 }
 
 const ok = (text, etag = '"v1"') => ({ status: 200, ok: true, text: async () => text, headers: { get: () => etag } });
@@ -104,4 +106,16 @@ test('background: permission granted/revoked toggles the setting', async () => {
   await new Promise((r) => setTimeout(r, 20));
   assert.equal(b.store.settings.aislist, false);
   assert.equal('aislistData' in b.store, false);
+});
+
+test('background: opens the welcome page on first install only, settings untouched', async () => {
+  const b = boot({ respond: () => ok(LIST) });
+  for (const reason of ['update', 'chrome_update', 'shared_module_update']) b.listeners.installed({ reason, previousVersion: '1.0.0' });
+  await new Promise((r) => setTimeout(r, 20));
+  assert.deepEqual(b.tabs, []);
+  b.listeners.installed({ reason: 'install' });
+  await new Promise((r) => setTimeout(r, 20));
+  assert.deepEqual(b.tabs.map((t) => ({ ...t })), [{ url: 'welcome.html' }]);
+  assert.deepEqual(b.store, {});        // defaults stay: aislist and lookups off
+  assert.equal(b.requests.length, 0);
 });

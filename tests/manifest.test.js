@@ -1,4 +1,4 @@
-// Every file the manifest and popup reference must exist, so a typo can't ship.
+// Every file the manifest, popup and welcome page reference must exist, so a typo can't ship.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -16,7 +16,7 @@ test('manifest: MV3, minimal permissions', () => {
   assert.ok(manifest.description.length <= 132);
 });
 
-test('manifest and popup: referenced files exist', () => {
+test('manifest, popup and welcome: referenced files exist', () => {
   const files = new Set([
     manifest.background.service_worker,
     manifest.action.default_popup,
@@ -24,8 +24,11 @@ test('manifest and popup: referenced files exist', () => {
     ...Object.values(manifest.action.default_icon),
     ...manifest.content_scripts.flatMap((c) => [...(c.js || []), ...(c.css || [])]),
   ]);
-  const popup = fs.readFileSync(path.join(root, 'popup.html'), 'utf8');
-  for (const m of popup.matchAll(/(?:src|href)="([^":#]+)"/g)) files.add(m[1]);
+  for (const page of [manifest.action.default_popup, 'welcome.html']) {
+    const html = fs.readFileSync(path.join(root, page), 'utf8');
+    for (const m of html.matchAll(/(?:src|href)="([^":#]+)"/g)) files.add(m[1]);
+    assert.doesNotMatch(html, /<script(?![^>]*\bsrc=)/, `${page}: inline script (blocked by MV3 CSP)`);
+  }
   const bg = fs.readFileSync(path.join(root, manifest.background.service_worker), 'utf8');
   for (const m of bg.matchAll(/importScripts\('([^']+)'\)/g)) files.add(m[1]);
   for (const f of files) assert.ok(fs.existsSync(path.join(root, f)), `missing: ${f}`);

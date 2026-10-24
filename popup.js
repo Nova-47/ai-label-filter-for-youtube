@@ -2,7 +2,7 @@
 // background.js react to storage changes. The page counts come from asking the
 // active tab's content script, so no `tabs` permission is needed.
 const A = globalThis.AILF;
-const RAW_ORIGIN = 'https://raw.githubusercontent.com/*';
+const L = globalThis.AILF_LIST;
 const DEFAULTS = { enabled: true, mode: 'dim', lookups: false, aislist: false, channelRule: A.CHANNEL_RULE_DEFAULT, onboarded: false };
 const REASONS = {
   label: 'YouTube AI label',
@@ -149,21 +149,12 @@ async function render() {
   renderPage(await ask({ action: 'status' }));
 }
 
-// Must run inside the click handler: Chrome only shows the permission prompt
-// for a user gesture. background.js finishes the job if the popup closes.
+// Must run inside the click handler (see listswitch.js).
 async function turnListOn() {
-  let granted = false;
-  try { granted = await chrome.permissions.request({ origins: [RAW_ORIGIN] }); } catch { /* denied */ }
-  if (!granted) { $('aislist').checked = false; return; }
-  await saveSettings({ aislist: true, onboarded: true });
-  chrome.runtime.sendMessage({ action: 'aislist:refresh' }).catch(() => {});
+  if (!(await L.turnOn(saveSettings))) $('aislist').checked = false;
 }
 
-async function turnListOff() {
-  await saveSettings({ aislist: false });
-  await chrome.storage.local.remove(['aislistData', 'aislistMeta']);
-  chrome.permissions.remove({ origins: [RAW_ORIGIN] }).catch(() => {});
-}
+const turnListOff = () => L.turnOff(saveSettings);
 
 $('enabled').addEventListener('change', (e) => saveSettings({ enabled: e.target.checked }));
 $('lookups').addEventListener('change', (e) => saveSettings({ lookups: e.target.checked }));

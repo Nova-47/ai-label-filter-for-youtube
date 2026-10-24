@@ -73,4 +73,10 @@ const isRaw = (p) => (p.origins || []).includes(RAW_ORIGIN);
 chrome.permissions.onAdded.addListener((p) => { if (isRaw(p)) setListEnabled(true).catch(() => {}); });
 chrome.permissions.onRemoved.addListener((p) => { if (isRaw(p)) setListEnabled(false).catch(() => {}); });
 
+// First install only (not updates): open the welcome page, which offers the
+// AiSList switch. tabs.create needs no permission.
+chrome.runtime.onInstalled.addListener(({ reason }) => {
+  if (reason === 'install') chrome.tabs.create({ url: 'welcome.html' }).catch(() => {});
+});
+
 chrome.runtime.onStartup.addListener(() => { refresh(false).catch(() => {}); });
