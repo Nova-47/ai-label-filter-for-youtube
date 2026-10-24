@@ -57,12 +57,14 @@ This extension is not affiliated with, endorsed by, or sponsored by YouTube or G
 **Description (Korean, optional localized listing):** the UI is English only, so button and setting names are quoted in English.
 
 ```
-YouTube에서 AI 라벨이 붙은 영상을 흐리게 하거나 숨기고, 걸러진 이유를 보여 줍니다.
+YouTube에서 AI 라벨이 붙은 영상을 흐리게 표시합니다. 커뮤니티 목록 AiSList도 켤 수 있습니다. 흐리게 표시된 영상마다 이유가 나옵니다. "Show"를 누르면 다시 보입니다. 카드에 채널 링크가 있으면 "Allow channel"도 쓸 수 있습니다. 걸러진 영상을 아예 없애려면 "Hide"를 선택하세요.
 
-AI Label Filter for YouTube는 YouTube의 "AI로 제작됨(Made with AI)" 라벨만 사용합니다. 제목, 썸네일, 탐지 모델로 추측하지 않습니다. 확인할 수 있는 이유가 있을 때만 영상을 거릅니다.
+AI Label Filter for YouTube는 YouTube의 "AI로 제작됨(Made with AI)" 라벨과, 켠 경우 AiSList를 사용합니다. 제목, 썸네일, 탐지 모델로 추측하지 않습니다. 확인할 수 있는 이유가 있을 때만 영상을 거릅니다.
+
+오픈소스(MIT)이며 빌드 과정이 없습니다. 모든 네트워크 요청은 두 함수 중 하나에서 보냅니다. 개발자에게 보내는 정보는 없습니다.
 
 라벨 없는 AI 영상이 많습니다
-YouTube 라벨은 AI 생성 콘텐츠 일부에만 붙습니다. 라벨이 없는 AI 영상도 많습니다. 이 확장 프로그램은 정확하지만 모든 AI 영상을 찾지는 못합니다. 더 넓게 거르려면 AiSList를 켜세요. AiSList는 커뮤니티가 관리하는 AI 채널 목록이며 자체 검토와 삭제 요청 절차가 있습니다(기본 꺼짐).
+YouTube 라벨은 AI 생성 콘텐츠 일부에만 붙기 때문에 라벨이 없는 AI 영상이 많습니다. 더 넓게 거르려면 AiSList를 켜세요. AiSList는 커뮤니티가 관리하는 AI 채널 목록으로, 자체 검토와 삭제 요청 절차가 있으며 기본으로 꺼져 있습니다. AI 영상이 많이 올라오는 검색어와 주제(AI 음악, 로파이, 재즈, 역사 등)에서 가장 효과가 큽니다. 개인화된 홈 피드는 별로 달라지지 않을 수 있습니다.
 
 기능
 • 시청 페이지: YouTube가 AI 제작 라벨을 붙인 영상에 "Hide this channel"(이 채널 숨기기) 또는 "Dismiss"(닫기) 배너를 표시합니다
