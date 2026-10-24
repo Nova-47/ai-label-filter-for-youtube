@@ -20,12 +20,14 @@ Dim videos YouTube labels as made with AI and show why, or hide them. Also chann
 **Description (English):**
 
 ```
-Dim or hide YouTube videos labelled as made with AI, and see why each video was filtered.
+Dim YouTube videos labelled as made with AI and, if you turn it on, videos from channels on the community list AiSList. Each dimmed video shows why, with one click to show it or, when the card links its channel, to allow the channel. You can switch to hiding instead.
 
-AI Label Filter for YouTube uses YouTube's own "Made with AI" label. It does not guess from titles, thumbnails, or a detection model. A video is filtered only when there is a reason you can see.
+AI Label Filter for YouTube uses YouTube's own "Made with AI" label and, optionally, AiSList. It does not guess from titles, thumbnails, or a detection model. A video is filtered only when there is a reason you can see.
+
+Open source (MIT), with no build step. Every network request is made in one of two functions. Nothing is sent to the developer.
 
 MANY AI VIDEOS ARE NOT LABELLED
-YouTube labels only some AI-generated content. Many AI videos have no label. This extension is precise, not complete. For broader coverage, turn on AiSList, a community-maintained list of AI channels with its own review and removal process (off by default).
+YouTube labels only some AI-generated content. Many AI videos have no label. This extension is precise, not complete. For broader coverage, turn on AiSList, a community-maintained list of AI channels with its own review and removal process (off by default). It works best on searches and topics with many AI uploads, such as AI music, lofi, jazz and history. A personalised home feed may change little.
 
 WHAT IT DOES
 • On a video page: if YouTube labels a video as made with AI, a banner offers "Hide this channel" or "Dismiss"
