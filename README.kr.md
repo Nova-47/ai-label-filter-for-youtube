@@ -42,7 +42,7 @@ Chrome 110 이상이 필요합니다.
 
 1. YouTube가 AI로 제작됐다고 라벨을 붙인 [이 영상](https://www.youtube.com/watch?v=yHG-pivADos)을 엽니다. 몇 초 뒤 왼쪽 아래에 "YouTube labels this video as made with AI" 배너가 **Hide this channel**(이 채널 숨기기), **Dismiss**(닫기) 버튼과 함께 뜹니다.
 2. 그 채널 페이지(@eigi_and_ai)로 가거나 영상을 검색해 봅니다. 결과가 기기에 저장됐기 때문에, 그 영상 카드는 어디에 나오든 "YouTube AI label" 칩과 함께 흐리게 보입니다.
-3. 피드를 더 넓게 거르려면 팝업에서 **Hide channels listed in AiSList**(약 29,000개 채널이 담긴 커뮤니티 목록. 내려받기 권한을 Chrome이 묻습니다)나 **Check every visible video**(화면에 보이는 영상마다 YouTube에 한 번에 하나씩 묻습니다)를 켭니다.
+3. 피드를 더 넓게 거르려면 팝업에서 **Filter channels listed in AiSList**(30,000개 이상의 채널이 담긴 커뮤니티 목록. 내려받기 권한을 Chrome이 묻습니다)나 **Check every visible video**(화면에 보이는 영상마다 YouTube에 한 번에 하나씩 묻습니다)를 켭니다.
 
 ---
 
@@ -176,7 +176,7 @@ YouTube가 정상적으로 답하지 않으면 모든 탭에서 요청을 한동
 | Filtered videos: **Dim + reason** / **Hide** | Dim + reason | Dim은 카드를 흐리게 하고 이유를 보여 주고, Hide는 화면에서 없앱니다([화면에서 보이는 것](#화면에서-보이는-것) 참고). |
 | **Check every visible video** | 꺼짐 | 화면에 보이고 저장된 결과가 없는 카드를 YouTube에 묻습니다. 가장 최근에 보인 카드부터, 탭이 앞에 있을 때만, 영상마다 탭당 한 번입니다. 차례가 오기 전에 화면에서 벗어난 카드는 건너뜁니다. |
 | **Also dim channels whose recent videos are mostly AI-labelled** | 켜짐 | [카드를 거르는 이유](#카드를-거르는-이유)의 4번 규칙을 적용합니다. 끄면 채널에서 확인한 영상 때문에 흐려지는 카드는 없고, 라벨 영상은 그대로 거릅니다. |
-| **Hide channels listed in AiSList** | 꺼짐 | [AiSList](https://github.com/Override92/AiSList)에 있는 채널을 거릅니다. 목록은 24시간에 최대 한 번 내려받고, **Refresh now**로 다시 받을 수 있습니다. 처음에는 팝업에 "Community list (optional)" 카드가 **Turn on** / **Not now** 버튼과 함께 뜹니다. |
+| **Filter channels listed in AiSList** | 꺼짐 | [AiSList](https://github.com/Override92/AiSList)에 있는 채널을 거릅니다. 목록은 24시간에 최대 한 번 내려받고, **Refresh now**로 다시 받을 수 있습니다. 처음에는 팝업에 "Community list (optional)" 카드가 **Turn on** / **Not now** 버튼과 함께 뜹니다. |
 | **Hidden channels** | 비어 있음 | **Hide this channel**로 추가한 채널입니다. **Remove**로 뺍니다. |
 | **Always shown channels** | 비어 있음 | **Allow channel**이나 "Dimmed for their channel"의 **Allow**로 추가한 채널입니다. **Remove**로 뺍니다. |
 | **Dimmed for their channel** | — | 채널 규칙이 켜져 있을 때 나옵니다. 지금 4번 규칙으로 흐리게 표시 중인 채널과 "N of last M"을 보여 줍니다. **Allow**를 누르면 Always shown channels에 추가합니다. 없으면 "None right now."가 나옵니다. |
@@ -218,7 +218,7 @@ YouTube는 홈·검색·사이드바 카드 데이터에 AI 라벨을 넣지 않
 내부 엔드포인트라서 보장은 없고, 요청은 사용자의 IP 주소에서 나갑니다. 이 확장은 요청 빈도를 낮게 유지하고([YouTube로 보내는 요청](#youtube로-보내는-요청) 참고), 쿠키를 빼고, YouTube가 거부하면 멈춥니다. 피드에서 요청을 아예 보내지 않으려면 **Check every visible video**를 꺼 두세요(기본값).
 
 **누가 봐도 AI 영상인데 그대로 보여요.**
-YouTube 라벨이 없는 영상일 가능성이 큽니다. **Hide channels listed in AiSList**를 켜면 더 넓게 거를 수 있습니다.
+YouTube 라벨이 없는 영상일 가능성이 큽니다. **Filter channels listed in AiSList**를 켜면 더 넓게 거를 수 있습니다.
 
 **AiSList가 AI 채널이 아닌 채널을 걸렀어요.**
 그 카드에서 **Allow channel**을 누르면 다시는 걸러지지 않습니다. 모두를 위해 목록을 고치려면 [AiSList의 삭제 요청 절차](https://github.com/Override92/AiSList)를 이용해 주세요. 이 확장은 목록을 수정하지 않습니다.

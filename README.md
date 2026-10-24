@@ -42,7 +42,7 @@ By default, feeds change only for videos the extension already knows about, so a
 
 1. Open [this video](https://www.youtube.com/watch?v=yHG-pivADos), which YouTube labels as made with AI. After a few seconds a banner appears in the bottom-left corner: "YouTube labels this video as made with AI", with **Hide this channel** and **Dismiss**.
 2. Go to the channel's page (@eigi_and_ai) or search for the video. Wherever its card appears, it is now dimmed with the chip "YouTube AI label", because the result is saved on your device.
-3. To filter feeds more widely, open the popup and turn on **Hide channels listed in AiSList** (a community list of about 29,000 channels; Chrome asks for permission to download it) or **Check every visible video** (asks YouTube about each video on screen, one request at a time).
+3. To filter feeds more widely, open the popup and turn on **Filter channels listed in AiSList** (a community list of 30,000+ channels; Chrome asks for permission to download it) or **Check every visible video** (asks YouTube about each video on screen, one request at a time).
 
 ---
 
@@ -174,7 +174,7 @@ It does not ask for `tabs`, `history`, or "read and change all your data on all 
 | Filtered videos: **Dim + reason** / **Hide** | Dim + reason | Dim fades the card and shows why; Hide removes it from view (see [What you see](#what-you-see)). |
 | **Check every visible video** | Off | Asks YouTube about cards on screen that have no saved result: newest first, only while the tab is in front, each video once per tab. Cards scrolled away before their turn are skipped. |
 | **Also dim channels whose recent videos are mostly AI-labelled** | On | Applies rule 4 of [Why a card is filtered](#why-a-card-is-filtered). Off: no card is dimmed for its channel's checked videos; labelled videos are still filtered. |
-| **Hide channels listed in AiSList** | Off | Filters channels on [AiSList](https://github.com/Override92/AiSList). Downloads the list at most once per 24 hours; **Refresh now** downloads it again. On first use the popup offers it in a "Community list (optional)" card with **Turn on** and **Not now**. |
+| **Filter channels listed in AiSList** | Off | Filters channels on [AiSList](https://github.com/Override92/AiSList). Downloads the list at most once per 24 hours; **Refresh now** downloads it again. On first use the popup offers it in a "Community list (optional)" card with **Turn on** and **Not now**. |
 | **Hidden channels** | empty | Channels added with **Hide this channel**. **Remove** takes one off. |
 | **Always shown channels** | empty | Channels added with **Allow channel**, or with **Allow** under "Dimmed for their channel". **Remove** takes one off. |
 | **Dimmed for their channel** | — | Shown while the channel rule is on. Lists the channels rule 4 currently dims, with "N of last M". **Allow** adds one to Always shown channels. "None right now." appears when there are none. |
@@ -214,7 +214,7 @@ YouTube doesn't include the AI label in the data for home, search or sidebar car
 There are no guarantees with an internal endpoint, and the requests come from your IP address. The extension keeps the rate low (see [Requests to YouTube](#requests-to-youtube)), leaves out your cookies, and stops when YouTube pushes back. If you want no requests from feeds, leave **Check every visible video** off (the default).
 
 **A video that is obviously AI is still showing.**
-Most likely it has no YouTube label. Turn on **Hide channels listed in AiSList** for broader coverage.
+Most likely it has no YouTube label. Turn on **Filter channels listed in AiSList** for broader coverage.
 
 **AiSList filtered a channel that isn't AI.**
 Use **Allow channel** on its card; the channel will not be filtered again. To get the entry fixed for everyone, use [AiSList's own removal process](https://github.com/Override92/AiSList). This extension does not edit the list.
