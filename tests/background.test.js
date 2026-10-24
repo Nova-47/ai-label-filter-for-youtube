@@ -76,6 +76,31 @@ test('background: at most once per 24 h, then a conditional request (304 keeps d
   assert.equal(b.requests.length, 1);
 });
 
+test('background: 304 with no stored list is not a success; the next refresh downloads in full', async () => {
+  // Turned off and on during a conditional request: meta carried an old ETag,
+  // the stored list is gone, and the server answers 304.
+  const meta = { attemptedAt: 1, fetchedAt: 1, etag: '"v1"', count: 3 };
+  let status = 304;
+  const b = boot({ store: { settings: { aislist: true }, aislistMeta: meta },
+    respond: () => (status === 304 ? { status: 304, ok: false, headers: { get: () => null } } : ok(LIST, '"v2"')) });
+  await b.message('aislist:maybeRefresh');
+  assert.equal(b.requests.length, 1);
+  assert.equal(b.requests[0].opts.headers['If-None-Match'], '"v1"');
+  assert.equal('aislistData' in b.store, false);
+  assert.equal(b.store.aislistMeta.fetchedAt, undefined);
+  assert.equal(b.store.aislistMeta.etag, undefined);
+  assert.equal(b.store.aislistMeta.count, undefined);
+  assert.equal(b.store.aislistMeta.error, 'no stored copy of the list');
+  status = 200;
+  await b.message('aislist:maybeRefresh');                    // allowed at once, without If-None-Match
+  assert.equal(b.requests.length, 2);
+  assert.deepEqual({ ...b.requests[1].opts.headers }, {});
+  assert.equal(b.store.aislistData, 'one\ntwoà\nUCuAXFkgsw1L7xaCfnd5JJOw');
+  assert.equal(b.store.aislistMeta.etag, '"v2"');
+  assert.ok(b.store.aislistMeta.fetchedAt > 1);
+  assert.equal(b.store.aislistMeta.error, null);
+});
+
 test('background: a failed or empty download keeps the last good copy', async () => {
   const store = { settings: { aislist: true }, aislistData: 'old', aislistMeta: { count: 1, etag: '"v0"' } };
   const b = boot({ store, respond: () => ({ status: 500, ok: false, headers: { get: () => null } }) });

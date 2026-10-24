@@ -31,6 +31,17 @@ async function doRefresh(force) {
       headers: !force && meta.etag ? { 'If-None-Match': meta.etag } : {},
     });
     if (res.status === 304) {
+      // 304 but no stored copy (the list was turned off and on during this
+      // request): not a success. Drop the ETag and allow the next refresh at
+      // once, so it downloads the list in full.
+      const { aislistData } = await chrome.storage.local.get('aislistData');
+      if (!aislistData) {
+        delete next.etag;
+        delete next.fetchedAt;
+        delete next.count;
+        next.attemptedAt = 0;
+        throw new Error('no stored copy of the list');
+      }
       next.fetchedAt = Date.now();
     } else if (!res.ok) {
       throw new Error('HTTP ' + res.status);
