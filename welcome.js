@@ -7,6 +7,9 @@ const L = globalThis.AILF_LIST;
 const TEXT = {
   title: 'AI Label Filter is installed',
   intro: 'Right now it only acts on videos it already knows about, so your feed looks the same as before.',
+  // Replaces `intro` once something is turned on.
+  introList: 'The list is on. Videos from listed channels are now filtered in feeds and search results.',
+  introLookups: 'It checks every visible video and filters those YouTube labels as made with AI.',
   expect: 'The community list works best on searches and topics with many AI uploads, such as AI music, lofi, ' +
     'jazz and history. A personalised home feed may change little.',
   listHeading: 'Community list (optional)',
@@ -66,6 +69,7 @@ async function render() {
   $('list-status').hidden = !status;
   // Demo searches only make sense once the list is on and downloaded.
   const ready = on && !!meta.fetchedAt;
+  $('intro').textContent = ready ? TEXT.introList : settings.lookups ? TEXT.introLookups : TEXT.intro;
   for (const b of $('demo').children) b.disabled = !ready;
   $('demo-reason').textContent = ready ? '' : on ? TEXT.demoNeedsDownload : TEXT.demoNeedsList;
   $('demo-reason').hidden = ready;
