@@ -20,7 +20,7 @@ Dim YouTube videos labelled as made with AI and show why. Optional community lis
 **Description (English):**
 
 ```
-Dims YouTube videos labelled as made with AI and shows why, and can also filter channels on the community list AiSList (off by default). It helps most on searches with many AI uploads, such as lofi, jazz and history, and may change little on a personalised home feed. Nothing is sent to the developer.
+It dims YouTube videos labelled as made with AI, shows why, and can also filter channels on the community list AiSList (off by default). It helps most on searches with many AI uploads, such as lofi, jazz and history, and may change little on a personalised home feed. Nothing is sent to the developer.
 
 Each dimmed video shows why. Click "Show" to see it. When the card links its channel, you can use "Allow channel". Select "Hide" to remove filtered videos instead.
 

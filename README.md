@@ -2,7 +2,7 @@
 
 # AI Label Filter for YouTube
 
-A Chrome extension that dims YouTube videos labelled as made with AI and shows why, and can also filter channels on the community list [AiSList](https://github.com/Override92/AiSList) (by Override92, [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/), off by default). It helps most on searches with many AI uploads, such as lofi, jazz and history, and may change little on a personalised home feed. Nothing is sent to the developer.
+A Chrome extension that dims YouTube videos labelled as made with AI, shows why, and can also filter channels on the community list [AiSList](https://github.com/Override92/AiSList) (by Override92, [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/), off by default). It helps most on searches with many AI uploads, such as lofi, jazz and history, and may change little on a personalised home feed. Nothing is sent to the developer.
 
 Dimmed cards show the reason and **Show**. When a card links its channel, it also shows **Allow channel**. Select **Hide** to remove filtered cards instead. Its only inferred rule identifies channels where most recently checked videos have labels. The chip shows the count. The rule is on by default, and you can turn it off.
 
